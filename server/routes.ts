@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { setupAuth } from "./auth";
 import { storage } from "./storage-simple";
 import { insertLeaveApplicationSchema, insertNotificationSchema } from "@shared/schema";
@@ -283,5 +284,50 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+
+  // WebSocket server for real-time notifications
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const userSockets = new Map<number, WebSocket[]>();
+
+  wss.on('connection', (ws: WebSocket, req) => {
+    console.log('New WebSocket connection');
+    
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === 'auth' && message.userId) {
+          // Store user's socket connection
+          if (!userSockets.has(message.userId)) {
+            userSockets.set(message.userId, []);
+          }
+          userSockets.get(message.userId)!.push(ws);
+          
+          ws.on('close', () => {
+            const sockets = userSockets.get(message.userId) || [];
+            const index = sockets.indexOf(ws);
+            if (index > -1) {
+              sockets.splice(index, 1);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+  });
+
+  // Global function to send real-time notifications
+  global.sendRealtimeNotification = (userId: number, notification: any) => {
+    const sockets = userSockets.get(userId) || [];
+    sockets.forEach(socket => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'notification',
+          data: notification
+        }));
+      }
+    });
+  };
+
   return httpServer;
 }

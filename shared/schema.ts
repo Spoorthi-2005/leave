@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["student", "faculty", "admin"]);
 export const leaveTypeEnum = pgEnum("leave_type", ["sick", "casual", "personal", "emergency", "other"]);
-export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected", "cancelled"]);
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "teacher_approved", "hod_approved", "approved", "rejected", "cancelled"]);
 export const priorityEnum = pgEnum("priority", ["normal", "urgent"]);
 
 export const users = pgTable("users", {
@@ -46,6 +46,14 @@ export const leaveApplications = pgTable("leave_applications", {
   status: leaveStatusEnum("status").default("pending").notNull(),
   priority: priorityEnum("priority").default("normal").notNull(),
   attachmentPath: text("attachment_path"),
+  attachmentName: text("attachment_name"),
+  attachmentSize: integer("attachment_size"),
+  classTeacherId: integer("class_teacher_id").references(() => users.id),
+  hodId: integer("hod_id").references(() => users.id),
+  classTeacherApprovedAt: timestamp("class_teacher_approved_at"),
+  hodApprovedAt: timestamp("hod_approved_at"),
+  classTeacherComments: text("class_teacher_comments"),
+  hodComments: text("hod_comments"),
   reviewedBy: integer("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   reviewComments: text("review_comments"),
