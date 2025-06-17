@@ -175,11 +175,21 @@ export class MemoryStorage implements IStorage {
   }
 
   async createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication> {
+    const user = await this.getUser(userId);
+    const classTeacher = await this.getUsersByRole('faculty').then(faculty => faculty[0]); // Get first faculty as class teacher
+    const hod = await this.getUsersByRole('admin').then(admins => admins[0]); // Get first admin as HOD
+    
     const newApplication: any = {
       id: this.leaveApplications.length + 1,
       userId,
       ...application,
       status: 'pending',
+      classTeacherId: classTeacher?.id || null,
+      hodId: hod?.id || null,
+      classTeacherApprovedAt: null,
+      hodApprovedAt: null,
+      classTeacherComments: null,
+      hodComments: null,
       reviewedBy: null,
       reviewedAt: null,
       reviewComments: null,
@@ -187,6 +197,17 @@ export class MemoryStorage implements IStorage {
       updatedAt: new Date()
     };
     this.leaveApplications.push(newApplication);
+    
+    // Create notifications for approval workflow
+    if (classTeacher) {
+      await this.createNotification(classTeacher.id, {
+        title: 'New Leave Application',
+        message: `${user?.fullName} has submitted a leave application for your review`,
+        type: 'leave_application',
+        data: { applicationId: newApplication.id }
+      });
+    }
+    
     return newApplication;
   }
 
@@ -218,14 +239,89 @@ export class MemoryStorage implements IStorage {
     const appIndex = this.leaveApplications.findIndex(app => app.id === id);
     if (appIndex === -1) return undefined;
 
-    this.leaveApplications[appIndex] = {
-      ...this.leaveApplications[appIndex],
-      status,
-      reviewedBy: reviewerId,
-      reviewedAt: new Date(),
-      reviewComments: comments,
-      updatedAt: new Date()
-    };
+    const application = this.leaveApplications[appIndex];
+    const reviewer = await this.getUser(reviewerId);
+    const applicant = await this.getUser(application.userId);
+
+    // Multi-level approval workflow
+    if (reviewer?.role === 'faculty' && status === 'approved') {
+      // Class teacher approval
+      this.leaveApplications[appIndex] = {
+        ...application,
+        status: 'teacher_approved',
+        classTeacherApprovedAt: new Date(),
+        classTeacherComments: comments,
+        updatedAt: new Date()
+      };
+
+      // Notify HOD for next level approval
+      if (application.hodId) {
+        await this.createNotification(application.hodId, {
+          title: 'Leave Application - HOD Approval Required',
+          message: `${applicant?.fullName}'s leave application approved by class teacher, awaiting your approval`,
+          type: 'leave_approval_required',
+          data: { applicationId: id }
+        });
+      }
+
+      // Notify student of progress
+      await this.createNotification(application.userId, {
+        title: 'Leave Application Update',
+        message: 'Your leave application has been approved by your class teacher and forwarded to HOD',
+        type: 'leave_status_update',
+        data: { applicationId: id, status: 'teacher_approved' }
+      });
+
+    } else if (reviewer?.role === 'admin' && status === 'approved' && application.status === 'teacher_approved') {
+      // HOD approval - final approval
+      this.leaveApplications[appIndex] = {
+        ...application,
+        status: 'approved',
+        hodApprovedAt: new Date(),
+        hodComments: comments,
+        reviewedBy: reviewerId,
+        reviewedAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Notify student of final approval
+      await this.createNotification(application.userId, {
+        title: 'Leave Application Approved',
+        message: 'Your leave application has been fully approved by both class teacher and HOD',
+        type: 'leave_approved',
+        data: { applicationId: id, status: 'approved' }
+      });
+
+    } else if (status === 'rejected') {
+      // Rejection at any level
+      this.leaveApplications[appIndex] = {
+        ...application,
+        status: 'rejected',
+        reviewedBy: reviewerId,
+        reviewedAt: new Date(),
+        reviewComments: comments,
+        updatedAt: new Date()
+      };
+
+      // Notify student of rejection
+      await this.createNotification(application.userId, {
+        title: 'Leave Application Rejected',
+        message: `Your leave application has been rejected. Reason: ${comments || 'No reason provided'}`,
+        type: 'leave_rejected',
+        data: { applicationId: id, status: 'rejected' }
+      });
+
+    } else {
+      // Default status update
+      this.leaveApplications[appIndex] = {
+        ...application,
+        status,
+        reviewedBy: reviewerId,
+        reviewedAt: new Date(),
+        reviewComments: comments,
+        updatedAt: new Date()
+      };
+    }
 
     return this.leaveApplications[appIndex];
   }
