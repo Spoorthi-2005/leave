@@ -1,0 +1,351 @@
+import { 
+  users, 
+  leaveApplications, 
+  leaveBalance, 
+  notifications, 
+  substituteAssignments,
+  leavePolicies,
+  type User, 
+  type InsertUser,
+  type LeaveApplication,
+  type InsertLeaveApplication,
+  type LeaveBalance,
+  type Notification,
+  type InsertNotification,
+  type SubstituteAssignment,
+  type LeavePolicy
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, gte, lte, sql, count } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
+const PostgresSessionStore = connectPg(session);
+
+export interface IStorage {
+  // User management
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  getUsersByRole(role: string): Promise<User[]>;
+
+  // Leave applications
+  createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication>;
+  getLeaveApplicationById(id: number): Promise<LeaveApplication | undefined>;
+  getUserLeaveApplications(userId: number): Promise<LeaveApplication[]>;
+  getPendingLeaveApplications(reviewerId?: number): Promise<LeaveApplication[]>;
+  updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined>;
+  getLeaveApplicationsForReview(facultyId: number): Promise<LeaveApplication[]>;
+  getRecentLeaveApplications(limit?: number): Promise<LeaveApplication[]>;
+
+  // Leave balance
+  getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;
+  createLeaveBalance(userId: number, year: number): Promise<LeaveBalance>;
+  updateLeaveBalance(userId: number, year: number, usedLeaves: number): Promise<void>;
+
+  // Notifications
+  createNotification(userId: number, notification: InsertNotification): Promise<Notification>;
+  getUserNotifications(userId: number, unreadOnly?: boolean): Promise<Notification[]>;
+  markNotificationAsRead(id: number): Promise<void>;
+
+  // Substitute assignments
+  getSubstituteAssignments(facultyId: number): Promise<SubstituteAssignment[]>;
+  createSubstituteAssignment(assignment: Omit<SubstituteAssignment, 'id' | 'createdAt'>): Promise<SubstituteAssignment>;
+
+  // Leave policies
+  getLeavePolicies(): Promise<LeavePolicy[]>;
+
+  // Dashboard stats
+  getDashboardStats(userId: number, role: string): Promise<any>;
+  getSystemStats(): Promise<any>;
+
+  sessionStore: session.SessionStore;
+}
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.SessionStore;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    
+    // Create initial leave balance for the current year
+    const currentYear = new Date().getFullYear();
+    await this.createLeaveBalance(user.id, currentYear);
+    
+    return user;
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role as any));
+  }
+
+  async createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication> {
+    const [leaveApp] = await db
+      .insert(leaveApplications)
+      .values({ ...application, userId })
+      .returning();
+    return leaveApp;
+  }
+
+  async getLeaveApplicationById(id: number): Promise<LeaveApplication | undefined> {
+    const [application] = await db.select().from(leaveApplications).where(eq(leaveApplications.id, id));
+    return application || undefined;
+  }
+
+  async getUserLeaveApplications(userId: number): Promise<LeaveApplication[]> {
+    return await db
+      .select()
+      .from(leaveApplications)
+      .where(eq(leaveApplications.userId, userId))
+      .orderBy(desc(leaveApplications.appliedAt));
+  }
+
+  async getPendingLeaveApplications(reviewerId?: number): Promise<LeaveApplication[]> {
+    let query = db.select({
+      ...leaveApplications,
+      userName: users.fullName,
+      userEmail: users.email,
+      studentId: users.studentId,
+      department: users.department
+    })
+    .from(leaveApplications)
+    .innerJoin(users, eq(leaveApplications.userId, users.id))
+    .where(eq(leaveApplications.status, 'pending'))
+    .orderBy(desc(leaveApplications.appliedAt));
+
+    return await query;
+  }
+
+  async updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined> {
+    const [updatedApp] = await db
+      .update(leaveApplications)
+      .set({ 
+        status: status as any, 
+        reviewedBy: reviewerId, 
+        reviewedAt: new Date(),
+        reviewComments: comments,
+        updatedAt: new Date()
+      })
+      .where(eq(leaveApplications.id, id))
+      .returning();
+    return updatedApp || undefined;
+  }
+
+  async getLeaveApplicationsForReview(facultyId: number): Promise<LeaveApplication[]> {
+    // Get applications from students in faculty's department/classes
+    return await db.select({
+      ...leaveApplications,
+      userName: users.fullName,
+      userEmail: users.email,
+      studentId: users.studentId,
+      department: users.department
+    })
+    .from(leaveApplications)
+    .innerJoin(users, eq(leaveApplications.userId, users.id))
+    .where(and(
+      eq(leaveApplications.status, 'pending'),
+      eq(users.role, 'student')
+    ))
+    .orderBy(desc(leaveApplications.appliedAt));
+  }
+
+  async getRecentLeaveApplications(limit: number = 10): Promise<LeaveApplication[]> {
+    return await db.select({
+      ...leaveApplications,
+      userName: users.fullName,
+      userEmail: users.email,
+      studentId: users.studentId
+    })
+    .from(leaveApplications)
+    .innerJoin(users, eq(leaveApplications.userId, users.id))
+    .orderBy(desc(leaveApplications.appliedAt))
+    .limit(limit);
+  }
+
+  async getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined> {
+    const [balance] = await db
+      .select()
+      .from(leaveBalance)
+      .where(and(eq(leaveBalance.userId, userId), eq(leaveBalance.year, year)));
+    return balance || undefined;
+  }
+
+  async createLeaveBalance(userId: number, year: number): Promise<LeaveBalance> {
+    const [balance] = await db
+      .insert(leaveBalance)
+      .values({ userId, year, totalLeaves: 30, usedLeaves: 0, availableLeaves: 30 })
+      .returning();
+    return balance;
+  }
+
+  async updateLeaveBalance(userId: number, year: number, usedLeaves: number): Promise<void> {
+    const totalLeaves = 30; // Default total leaves
+    const availableLeaves = totalLeaves - usedLeaves;
+    
+    await db
+      .update(leaveBalance)
+      .set({ usedLeaves, availableLeaves, updatedAt: new Date() })
+      .where(and(eq(leaveBalance.userId, userId), eq(leaveBalance.year, year)));
+  }
+
+  async createNotification(userId: number, notification: InsertNotification): Promise<Notification> {
+    const [notif] = await db
+      .insert(notifications)
+      .values({ ...notification, userId })
+      .returning();
+    return notif;
+  }
+
+  async getUserNotifications(userId: number, unreadOnly: boolean = false): Promise<Notification[]> {
+    let query = db.select().from(notifications).where(eq(notifications.userId, userId));
+    
+    if (unreadOnly) {
+      query = query.where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    }
+    
+    return await query.orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, id));
+  }
+
+  async getSubstituteAssignments(facultyId: number): Promise<SubstituteAssignment[]> {
+    return await db
+      .select()
+      .from(substituteAssignments)
+      .where(eq(substituteAssignments.substituteFacultyId, facultyId))
+      .orderBy(desc(substituteAssignments.date));
+  }
+
+  async createSubstituteAssignment(assignment: Omit<SubstituteAssignment, 'id' | 'createdAt'>): Promise<SubstituteAssignment> {
+    const [subAssignment] = await db
+      .insert(substituteAssignments)
+      .values(assignment)
+      .returning();
+    return subAssignment;
+  }
+
+  async getLeavePolicies(): Promise<LeavePolicy[]> {
+    return await db.select().from(leavePolicies);
+  }
+
+  async getDashboardStats(userId: number, role: string): Promise<any> {
+    if (role === 'student') {
+      const currentYear = new Date().getFullYear();
+      const balance = await this.getUserLeaveBalance(userId, currentYear);
+      
+      const applications = await db
+        .select({ status: leaveApplications.status })
+        .from(leaveApplications)
+        .where(eq(leaveApplications.userId, userId));
+
+      const stats = applications.reduce((acc, app) => {
+        acc[app.status] = (acc[app.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
+        leaveBalance: balance || { availableLeaves: 30, usedLeaves: 0, totalLeaves: 30 },
+        leaveStats: {
+          approved: stats.approved || 0,
+          pending: stats.pending || 0,
+          rejected: stats.rejected || 0
+        }
+      };
+    } else if (role === 'faculty') {
+      const pendingReviews = await db
+        .select({ count: count() })
+        .from(leaveApplications)
+        .innerJoin(users, eq(leaveApplications.userId, users.id))
+        .where(and(
+          eq(leaveApplications.status, 'pending'),
+          eq(users.role, 'student')
+        ));
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const approvedToday = await db
+        .select({ count: count() })
+        .from(leaveApplications)
+        .where(and(
+          eq(leaveApplications.reviewedBy, userId),
+          eq(leaveApplications.status, 'approved'),
+          gte(leaveApplications.reviewedAt, today),
+          lte(leaveApplications.reviewedAt, tomorrow)
+        ));
+
+      return {
+        reviewStats: {
+          pending: pendingReviews[0]?.count || 0,
+          approvedToday: approvedToday[0]?.count || 0
+        },
+        facultyStats: {
+          studentsAssigned: 42, // This would be calculated based on actual assignments
+          substituteRequests: 2 // This would be calculated based on actual substitute requests
+        }
+      };
+    }
+
+    return {};
+  }
+
+  async getSystemStats(): Promise<any> {
+    const totalUsers = await db.select({ count: count() }).from(users);
+    const pendingApprovals = await db
+      .select({ count: count() })
+      .from(leaveApplications)
+      .where(eq(leaveApplications.status, 'pending'));
+
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+    
+    const leavesThisMonth = await db
+      .select({ count: count() })
+      .from(leaveApplications)
+      .where(gte(leaveApplications.appliedAt, currentMonth));
+
+    return {
+      totalUsers: totalUsers[0]?.count || 0,
+      pendingApprovals: pendingApprovals[0]?.count || 0,
+      leavesThisMonth: leavesThisMonth[0]?.count || 0,
+      efficiency: 94 // This would be calculated based on processing times
+    };
+  }
+}
+
+export const storage = new DatabaseStorage();
