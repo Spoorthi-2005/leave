@@ -1,0 +1,87 @@
+*Leave Management System MERN project prompt* tailored exactly like the format you shared:
+---
+
+*📝 Prompt:*
+
+Create a full-stack *MERN (MongoDB, Express.js, React.js, Node.js)* project called *Leave Management System* with the following:
+
+---
+
+✅ *Features:*
+
+* User roles: *Student, **Faculty, **Admin/HOD*
+* JWT-based *Authentication & Authorization*
+* Role-based *Login* & *Dashboard views*
+* *Password hashing* using bcryptjs
+* Leave application form with:
+
+  * Leave type (Sick, Casual, Other)
+  * From & To dates
+  * Reason
+  * Optional *file upload* (medical certificate etc.) using Multer
+* Review system:
+
+  * Faculty can approve/reject student leaves
+  * Escalation to HOD for long leaves
+  * Admin can adjust leave balance
+* Leave record stored in *MongoDB* using Mongoose
+* *Email notifications* using Nodemailer
+* *SMS alerts* using Twilio (optional)
+* Real-time *notifications* using Socket.io
+* Leave policy management (CRUD)
+* Leave balance adjustment feature
+* *PDF/Excel Report* generation for Admin
+* Assign substitute subject teacher when one is on leave
+* Protected routes for authenticated users only
+* *Responsive UI* using Tailwind CSS or Bootstrap
+
+---
+
+📁 *Folder Structure:*
+
+bash
+/client              → React frontend
+    /components      → Reusable components
+    /pages           → Login, ApplyLeave, Dashboard etc.
+    /services        → Axios API functions
+    /context         → Auth and user context
+    /App.js
+
+/server              → Node.js + Express backend
+    /routes          → API routes for users, leaves, admin
+    /controllers     → Business logic handlers
+    /models          → Mongoose schemas
+    /middleware      → Auth & Role-based middleware
+    /utils           → Nodemailer, Twilio, Socket handlers
+    .env             → DB_URI, JWT_SECRET, EMAIL_PASS, etc.
+
+
+---
+
+🛠 *Dev Tools & Commands:*
+
+* Use npm install to install required dependencies in both /client and /server
+* Use concurrently to run React and Express apps together with npm run dev
+* Use nodemon for auto-restarting server during development
+
+---
+
+🌐 *Deployment (optional):*
+
+* *Frontend*: Deploy on Netlify or Vercel
+* *Backend*: Deploy on Render or Railway
+* MongoDB: Use *MongoDB Atlas*
+
+---
+
+💡 *Extras (optional):*
+
+* *Dark/Light Mode Toggle*
+* *Dashboard view* for different roles (Student, Faculty, Admin)
+* *Leave analytics charts* using Chart.js or Recharts
+* *Export leave logs* to Excel or PDF
+* Email/OTP *verification* on registration
+
+---
+
+Would you like me to generate this project skeleton or a README file with this prompt?
