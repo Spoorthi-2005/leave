@@ -152,6 +152,12 @@ export class MemoryStorage implements IStorage {
     const newUser: User = {
       id: this.users.length + 1,
       ...insertUser,
+      studentId: insertUser.studentId || null,
+      department: insertUser.department || null,
+      year: insertUser.year || null,
+      semester: insertUser.semester || null,
+      designation: insertUser.designation || null,
+      phoneNumber: insertUser.phoneNumber || null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -277,6 +283,7 @@ export class MemoryStorage implements IStorage {
       id: this.notifications.length + 1,
       userId,
       ...notification,
+      data: notification.data || null,
       read: false,
       createdAt: new Date()
     };
