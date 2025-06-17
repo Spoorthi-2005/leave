@@ -34,11 +34,11 @@ export interface IStorage {
   // Leave applications
   createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication>;
   getLeaveApplicationById(id: number): Promise<LeaveApplication | undefined>;
-  getUserLeaveApplications(userId: number): Promise<LeaveApplication[]>;
-  getPendingLeaveApplications(reviewerId?: number): Promise<LeaveApplication[]>;
+  getUserLeaveApplications(userId: number): Promise<any[]>;
+  getPendingLeaveApplications(reviewerId?: number): Promise<any[]>;
   updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined>;
-  getLeaveApplicationsForReview(facultyId: number): Promise<LeaveApplication[]>;
-  getRecentLeaveApplications(limit?: number): Promise<LeaveApplication[]>;
+  getLeaveApplicationsForReview(facultyId: number): Promise<any[]>;
+  getRecentLeaveApplications(limit?: number): Promise<any[]>;
 
   // Leave balance
   getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;
@@ -61,11 +61,11 @@ export interface IStorage {
   getDashboardStats(userId: number, role: string): Promise<any>;
   getSystemStats(): Promise<any>;
 
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
@@ -127,20 +127,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leaveApplications.appliedAt));
   }
 
-  async getPendingLeaveApplications(reviewerId?: number): Promise<LeaveApplication[]> {
-    let query = db.select({
-      ...leaveApplications,
-      userName: users.fullName,
-      userEmail: users.email,
-      studentId: users.studentId,
-      department: users.department
-    })
+  async getPendingLeaveApplications(reviewerId?: number): Promise<any[]> {
+    const result = await db.select()
     .from(leaveApplications)
     .innerJoin(users, eq(leaveApplications.userId, users.id))
     .where(eq(leaveApplications.status, 'pending'))
     .orderBy(desc(leaveApplications.appliedAt));
 
-    return await query;
+    return result.map((row: any) => ({
+      ...row.leave_applications,
+      userName: row.users.fullName,
+      userEmail: row.users.email,
+      studentId: row.users.studentId,
+      department: row.users.department
+    }));
   }
 
   async updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined> {

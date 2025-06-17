@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
-import { storage } from "./storage";
+import { storage } from "./storage-simple";
 import { insertLeaveApplicationSchema, insertNotificationSchema } from "@shared/schema";
 import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
