@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Plus, Calendar, Clock, CheckCircle, XCircle, FileText, Bell, User, LogOut, 
   TrendingUp, BarChart3, Download, Filter, Award, Target, Activity,
-  Users, AlertCircle, Star, Shield, Zap, Heart, MapPin
+  Users, AlertCircle, Star, Shield, Zap, Heart, MapPin, Eye
 } from "lucide-react";
 import { LeaveApplicationModal } from "@/components/leave-application-modal";
 import { LeaveDetailsModal } from "@/components/leave-details-modal";
@@ -17,6 +17,7 @@ import { Navigation } from "@/components/navigation";
 import { StatsCard } from "@/components/stats-card";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
+import type { LeaveApplication } from "@shared/schema";
 
 export default function EnhancedStudentDashboard() {
   const { user, isLoading, logoutMutation } = useAuth();
@@ -27,20 +28,21 @@ export default function EnhancedStudentDashboard() {
 
   // Real-time notification listener
   useEffect(() => {
-    const handleRealtimeNotification = (event: CustomEvent) => {
-      setRealtimeNotifications(prev => [event.detail, ...prev.slice(0, 4)]);
+    const handleRealtimeNotification = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      setRealtimeNotifications(prev => [customEvent.detail, ...prev.slice(0, 4)]);
     };
 
     window.addEventListener('realtime-notification', handleRealtimeNotification);
     return () => window.removeEventListener('realtime-notification', handleRealtimeNotification);
   }, []);
 
-  const { data: applications = [], isLoading: applicationsLoading } = useQuery({
+  const { data: applications = [], isLoading: applicationsLoading } = useQuery<LeaveApplication[]>({
     queryKey: ["/api/leave-applications/user"],
     enabled: !!user,
   });
 
-  const { data: leaveBalance } = useQuery({
+  const { data: leaveBalance = { availableLeaves: 30, usedLeaves: 0 } } = useQuery<{ availableLeaves: number; usedLeaves: number }>({
     queryKey: ["/api/leave-balance"],
     enabled: !!user,
   });
@@ -50,7 +52,7 @@ export default function EnhancedStudentDashboard() {
     enabled: !!user,
   });
 
-  const { data: notifications = [] } = useQuery({
+  const { data: notifications = [] } = useQuery<any[]>({
     queryKey: ["/api/notifications"],
     enabled: !!user,
   });
