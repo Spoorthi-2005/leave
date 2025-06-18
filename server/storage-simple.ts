@@ -179,6 +179,27 @@ export class MemoryStorage implements IStorage {
     const classTeacher = await this.getUsersByRole('faculty').then(faculty => faculty[0]); // Get first faculty as class teacher
     const hod = await this.getUsersByRole('admin').then(admins => admins[0]); // Get first admin as HOD
     
+    // Calculate leave duration
+    const fromDate = new Date(application.fromDate);
+    const toDate = new Date(application.toDate);
+    const leaveDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Check and update leave balance immediately upon application
+    const currentYear = new Date().getFullYear();
+    let userBalance = await this.getUserLeaveBalance(userId, currentYear);
+    
+    if (!userBalance) {
+      userBalance = await this.createLeaveBalance(userId, currentYear);
+    }
+    
+    // Check if user has enough leave balance
+    if (userBalance.availableLeaves < leaveDays) {
+      throw new Error(`Insufficient leave balance. You have ${userBalance.availableLeaves} days available, but requested ${leaveDays} days.`);
+    }
+    
+    // Temporarily reduce available leaves when application is submitted
+    await this.updateLeaveBalance(userId, currentYear, userBalance.usedLeaves + leaveDays);
+    
     const newApplication: any = {
       id: this.leaveApplications.length + 1,
       userId,
@@ -194,19 +215,28 @@ export class MemoryStorage implements IStorage {
       reviewedAt: null,
       reviewComments: null,
       appliedAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      leaveDays: leaveDays
     };
     this.leaveApplications.push(newApplication);
     
-    // Create notifications for approval workflow
-    if (classTeacher) {
-      await this.createNotification(classTeacher.id, {
-        title: 'New Leave Application',
-        message: `${user?.fullName} has submitted a leave application for your review`,
+    // Create notifications for approval workflow - send directly to HOD/Admin
+    if (hod) {
+      await this.createNotification(hod.id, {
+        title: 'New Leave Application - Approval Required',
+        message: `${user?.fullName} (${user?.role}) has submitted a ${application.leaveType} leave application requiring your approval`,
         type: 'leave_application',
         data: { applicationId: newApplication.id }
       });
     }
+    
+    // Notify user that application was submitted
+    await this.createNotification(userId, {
+      title: 'Leave Application Submitted',
+      message: `Your ${application.leaveType} leave application has been submitted and is pending HOD approval`,
+      type: 'leave_submitted',
+      data: { applicationId: newApplication.id }
+    });
     
     return newApplication;
   }
@@ -293,7 +323,13 @@ export class MemoryStorage implements IStorage {
       });
 
     } else if (status === 'rejected') {
-      // Rejection at any level
+      // Rejection at any level - restore leave balance
+      const currentYear = new Date().getFullYear();
+      const currentBalance = await this.getUserLeaveBalance(application.userId, currentYear);
+      if (currentBalance && application.leaveDays) {
+        await this.updateLeaveBalance(application.userId, currentYear, currentBalance.usedLeaves - application.leaveDays);
+      }
+
       this.leaveApplications[appIndex] = {
         ...application,
         status: 'rejected',
@@ -303,10 +339,10 @@ export class MemoryStorage implements IStorage {
         updatedAt: new Date()
       };
 
-      // Notify student of rejection
+      // Notify user of rejection
       await this.createNotification(application.userId, {
         title: 'Leave Application Rejected',
-        message: `Your leave application has been rejected. Reason: ${comments || 'No reason provided'}`,
+        message: `Your leave application has been rejected. Reason: ${comments || 'No reason provided'}. Your leave balance has been restored.`,
         type: 'leave_rejected',
         data: { applicationId: id, status: 'rejected' }
       });

@@ -24,7 +24,21 @@ function Router() {
 }
 
 function DashboardRouter() {
-  return <StudentDashboard />;
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <div>Loading...</div>;
+  }
+
+  switch (user.role) {
+    case 'admin':
+      return <AdminDashboard />;
+    case 'faculty':
+      return <FacultyDashboard />;
+    case 'student':
+    default:
+      return <StudentDashboard />;
+  }
 }
 
 function AppContent() {
