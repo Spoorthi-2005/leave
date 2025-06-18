@@ -12,6 +12,9 @@ import {
 import { LeaveApplicationModal } from "@/components/leave-application-modal";
 import { LeaveDetailsModal } from "@/components/leave-details-modal";
 import { LeaveHistory } from "@/components/leave-history";
+import { LeaveCalendar } from "@/components/leave-calendar";
+import { AnalyticsDashboard } from "@/components/analytics-dashboard";
+import { LeaveTemplates } from "@/components/leave-templates";
 import { Navigation } from "@/components/navigation";
 import { StatsCard } from "@/components/stats-card";
 import { useAuth } from "@/hooks/use-auth";
@@ -174,9 +177,9 @@ export default function StudentDashboard() {
           />
         </div>
 
-        {/* Main Content Tabs */}
+        {/* Enhanced Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-gray-900 luxury-card p-2 h-auto">
+          <TabsList className="grid w-full grid-cols-6 bg-white dark:bg-gray-900 luxury-card p-2 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 py-4 px-6 rounded-xl">
               <Activity className="w-4 h-4" />
               Overview
@@ -185,8 +188,20 @@ export default function StudentDashboard() {
               <FileText className="w-4 h-4" />
               Applications
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2 py-4 px-6 rounded-xl">
+            <TabsTrigger value="calendar" className="flex items-center gap-2 py-4 px-6 rounded-xl">
+              <Calendar className="w-4 h-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-2 py-4 px-6 rounded-xl">
+              <Star className="w-4 h-4" />
+              Templates
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2 py-4 px-6 rounded-xl">
               <BarChart3 className="w-4 h-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2 py-4 px-6 rounded-xl">
+              <Clock className="w-4 h-4" />
               History
             </TabsTrigger>
           </TabsList>
@@ -360,6 +375,30 @@ export default function StudentDashboard() {
                 ))
               )}
             </div>
+          </TabsContent>
+
+          {/* Calendar Tab */}
+          <TabsContent value="calendar">
+            <LeaveCalendar userId={user.id} />
+          </TabsContent>
+
+          {/* Templates Tab */}
+          <TabsContent value="templates">
+            <LeaveTemplates 
+              onUseTemplate={(template) => {
+                // Auto-fill the leave application form with template data
+                setShowApplyModal(true);
+              }} 
+              userRole={user.role}
+            />
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <AnalyticsDashboard 
+              userRole={user.role} 
+              department={user.department}
+            />
           </TabsContent>
 
           {/* History Tab */}
