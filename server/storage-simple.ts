@@ -17,6 +17,8 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, count } from "drizzle-orm";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 
 export interface IStorage {
   // User management
@@ -56,7 +58,7 @@ export interface IStorage {
   getDashboardStats(userId: number, role: string): Promise<any>;
   getSystemStats(): Promise<any>;
 
-  sessionStore: any;
+  sessionStore: session.Store;
 }
 
 export class MemoryStorage implements IStorage {
@@ -66,9 +68,13 @@ export class MemoryStorage implements IStorage {
   private notifications: Notification[] = [];
   private substituteAssignments: SubstituteAssignment[] = [];
   private leavePolicies: LeavePolicy[] = [];
-  sessionStore: any = null;
+  sessionStore: session.Store;
 
   constructor() {
+    const MemoryStore = createMemoryStore(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    });
     // Initialize with default admin user
     this.users.push({
       id: 1,
