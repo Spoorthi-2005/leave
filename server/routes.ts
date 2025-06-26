@@ -33,16 +33,44 @@ export function registerRoutes(app: Express): Server {
 
       const application = await storage.createLeaveApplication(userId, applicationData);
 
-      // Send notification to faculty/admin
-      const facultyUsers = await storage.getUsersByRole('faculty');
-      const adminUsers = await storage.getUsersByRole('admin');
-      const reviewers = [...facultyUsers, ...adminUsers];
+      // Implement multi-level approval workflow
+      const isLongLeave = application.leaveDays > 3;
+      const user = req.user!;
+      
+      let reviewers = [];
+      let notificationMessage = "";
 
-      // Create notifications
+      if (user.role === 'student') {
+        // Student workflow: Class Teacher -> HOD (if long leave)
+        if (user.classTeacherId) {
+          const classTeacher = await storage.getUser(user.classTeacherId);
+          if (classTeacher) {
+            reviewers.push(classTeacher);
+            notificationMessage = `Student ${user.fullName} has submitted a ${applicationData.leaveType} leave application (${application.leaveDays} days)`;
+          }
+        }
+      } else if (user.role === 'faculty') {
+        // Faculty workflow: HOD -> Admin (if long leave)
+        if (user.hodId) {
+          const hod = await storage.getUser(user.hodId);
+          if (hod) {
+            reviewers.push(hod);
+            notificationMessage = `Faculty ${user.fullName} has submitted a ${applicationData.leaveType} leave application (${application.leaveDays} days)`;
+            
+            // If long leave, also notify admin
+            if (isLongLeave) {
+              const adminUsers = await storage.getUsersByRole('admin');
+              reviewers.push(...adminUsers);
+            }
+          }
+        }
+      }
+
+      // Create notifications for reviewers
       for (const reviewer of reviewers) {
         await storage.createNotification(reviewer.id, {
-          title: "New Leave Application",
-          message: `${req.user!.fullName} has submitted a new ${applicationData.leaveType} leave application`,
+          title: "New Leave Application for Review",
+          message: notificationMessage,
           type: "info",
           data: { applicationId: application.id }
         });
@@ -51,7 +79,7 @@ export function registerRoutes(app: Express): Server {
         try {
           await emailService.sendLeaveApplicationNotification(
             reviewer.email,
-            req.user!.fullName,
+            user.fullName,
             applicationData.leaveType,
             applicationData.fromDate.toDateString(),
             applicationData.toDate.toDateString()

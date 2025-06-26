@@ -68,6 +68,11 @@ export const leaveApplications = pgTable("leave_applications", {
   reviewComments: text("review_comments"),
   appliedAt: timestamp("applied_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  leaveDays: integer("leave_days").notNull(),
+  adminId: integer("admin_id").references(() => users.id),
+  adminApprovedAt: timestamp("admin_approved_at"),
+  adminComments: text("admin_comments"),
+  isLongLeave: boolean("is_long_leave").notNull().default(false),
 });
 
 export const substituteAssignments = pgTable("substitute_assignments", {
