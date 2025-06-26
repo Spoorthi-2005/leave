@@ -10,6 +10,8 @@ import {
   TrendingUp, BarChart3, Activity, Star, Shield, Zap, Eye
 } from "lucide-react";
 import { LeaveApplicationModal } from "@/components/leave-application-modal";
+import { EnhancedLeaveForm } from "@/components/enhanced-leave-form";
+import { EnhancedDashboardLayout } from "@/components/enhanced-dashboard-layout";
 import { LeaveDetailsModal } from "@/components/leave-details-modal";
 import { LeaveHistory } from "@/components/leave-history";
 import { LeaveCalendar } from "@/components/leave-calendar";
@@ -24,8 +26,10 @@ import type { LeaveApplication } from "@shared/schema";
 export default function StudentDashboard() {
   const { user, isLoading, logoutMutation } = useAuth();
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showEnhancedForm, setShowEnhancedForm] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<LeaveApplication | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
   const { data: applications = [], isLoading: applicationsLoading } = useQuery<LeaveApplication[]>({
     queryKey: ["/api/leave-applications/user"],
@@ -93,27 +97,17 @@ export default function StudentDashboard() {
   );
 
   return (
-    <div className="min-h-screen luxury-gradient">
-      <Navigation 
-        title="GVPCEW Student Portal"
-        navItems={[
-          { label: "Dashboard", href: "/", active: true },
-          { label: "Leave History", href: "#history", active: false },
-        ]}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Header */}
-        <div className="luxury-card p-8 mb-8">
+    <EnhancedDashboardLayout title="Student Dashboard" userRole="student">
+      <div className="space-y-8">
+        {/* Enhanced Welcome Section */}
+        <div className="luxury-card p-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Welcome back, {user.fullName}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
-                {user.studentId} • {user.department} • Year {user.year}
+              <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.fullName}!</h1>
+              <p className="text-blue-100 mb-4">
+                Student ID: {user?.studentId} • Department: {user?.department} • Year: {user?.year}
               </p>
-              <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center space-x-6">
                 <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200 px-4 py-2">
                   <Shield className="w-4 h-4 mr-2" />
                   Student Account
@@ -386,8 +380,8 @@ export default function StudentDashboard() {
           <TabsContent value="templates">
             <LeaveTemplates 
               onUseTemplate={(template) => {
-                // Auto-fill the leave application form with template data
-                setShowApplyModal(true);
+                setSelectedTemplate(template);
+                setShowEnhancedForm(true);
               }} 
               userRole={user.role}
             />
@@ -408,10 +402,16 @@ export default function StudentDashboard() {
         </Tabs>
       </div>
 
-      {/* Modals */}
+      {/* Enhanced Modals */}
       <LeaveApplicationModal
         open={showApplyModal}
         onOpenChange={setShowApplyModal}
+      />
+
+      <EnhancedLeaveForm
+        open={showEnhancedForm}
+        onOpenChange={setShowEnhancedForm}
+        selectedTemplate={selectedTemplate}
       />
 
       <LeaveDetailsModal
@@ -419,6 +419,6 @@ export default function StudentDashboard() {
         onOpenChange={setShowDetailsModal}
         application={selectedApplication}
       />
-    </div>
+    </EnhancedDashboardLayout>
   );
 }
