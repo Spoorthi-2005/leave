@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { setupAuth } from "./auth";
-import { storage } from "./storage-simple";
+import { storage } from "./storage";
 import { insertLeaveApplicationSchema, insertNotificationSchema } from "@shared/schema";
 import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
