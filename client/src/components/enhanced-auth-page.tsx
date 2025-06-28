@@ -382,7 +382,7 @@ export default function EnhancedAuthPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Role</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select role" />
@@ -408,7 +408,7 @@ export default function EnhancedAuthPage() {
                                 <Building className="w-4 h-4" />
                                 Department
                               </FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select department" />
@@ -502,7 +502,7 @@ export default function EnhancedAuthPage() {
                                   <Users className="w-4 h-4" />
                                   Section (for CSE 4th Year Students)
                                 </FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                   <FormControl>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Select your section" />
