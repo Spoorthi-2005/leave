@@ -9,7 +9,7 @@ import NotFound from "@/pages/not-found";
 import EnhancedAuthPage from "@/components/enhanced-auth-page";
 import StudentDashboard from "@/pages/student-dashboard";
 import FacultyDashboard from "@/pages/faculty-dashboard";
-import AdminDashboard from "@/pages/admin-dashboard";
+import EnhancedAdminDashboard from "@/pages/enhanced-admin-dashboard";
 import { NotificationSystem } from "@/components/notification-system";
 import { useWebSocket } from "@/hooks/use-websocket";
 
@@ -32,7 +32,7 @@ function DashboardRouter() {
 
   switch (user.role) {
     case 'admin':
-      return <AdminDashboard />;
+      return <EnhancedAdminDashboard />;
     case 'faculty':
       return <FacultyDashboard />;
     case 'student':
