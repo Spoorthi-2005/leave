@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, User, Mail, Phone, MapPin, Building, Calendar, Shield, GraduationCap } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Phone, MapPin, Building, Calendar, Shield, GraduationCap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -439,7 +439,7 @@ export default function EnhancedAuthPage() {
                                 <FormItem>
                                   <FormLabel>Student ID</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Student ID" {...field} />
+                                    <Input placeholder="Student ID" {...field} value={field.value || ""} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -531,7 +531,7 @@ export default function EnhancedAuthPage() {
                               <FormItem>
                                 <FormLabel>Employee ID</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Employee ID" {...field} />
+                                  <Input placeholder="Employee ID" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -545,7 +545,7 @@ export default function EnhancedAuthPage() {
                               <FormItem>
                                 <FormLabel>Designation</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Designation" {...field} />
+                                  <Input placeholder="Designation" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -569,7 +569,7 @@ export default function EnhancedAuthPage() {
                               Phone Number
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Phone number" {...field} />
+                              <Input placeholder="Phone number" {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -586,7 +586,7 @@ export default function EnhancedAuthPage() {
                               Address
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Address" {...field} />
+                              <Input placeholder="Address" {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
