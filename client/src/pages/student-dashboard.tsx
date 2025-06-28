@@ -108,7 +108,7 @@ export default function StudentDashboard() {
                 Student ID: {user?.studentId} • Department: {user?.department} • Year: {user?.year}
               </p>
               <div className="flex items-center space-x-6">
-                <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200 px-4 py-2">
+                <Badge className="bg-white bg-opacity-20 text-white border border-white border-opacity-30 px-4 py-2">
                   <Shield className="w-4 h-4 mr-2" />
                   Student Account
                 </Badge>
@@ -411,7 +411,7 @@ export default function StudentDashboard() {
       <EnhancedLeaveForm
         open={showEnhancedForm}
         onOpenChange={setShowEnhancedForm}
-        selectedTemplate={selectedTemplate}
+        selectedTemplate={selectedTemplate || undefined}
       />
 
       <LeaveDetailsModal

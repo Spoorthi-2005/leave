@@ -1,27 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Calendar, Upload, User, Phone, MapPin, AlertCircle, FileText, Clock } from "lucide-react";
+import { Calendar, Clock, FileText, Phone, User, AlertTriangle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertLeaveApplicationSchema } from "@shared/schema";
 import { z } from "zod";
-import { format, differenceInDays } from "date-fns";
 
-const leaveFormSchema = insertLeaveApplicationSchema.extend({
-  fromDate: z.string().min(1, "Start date is required"),
-  toDate: z.string().min(1, "End date is required"),
+const leaveFormSchema = z.object({
+  leaveType: z.enum(["sick", "casual", "personal", "emergency", "other"]),
+  fromDate: z.string(),
+  toDate: z.string(),
+  reason: z.string().min(10, "Reason must be at least 10 characters"),
+  priority: z.enum(["normal", "urgent"]).optional(),
   emergencyContact: z.string().optional(),
   emergencyPhone: z.string().optional(),
+  attachmentPath: z.string().optional(),
 });
 
 type LeaveFormData = z.infer<typeof leaveFormSchema>;
@@ -37,69 +39,65 @@ interface EnhancedLeaveFormProps {
 
 export function EnhancedLeaveForm({ open, onOpenChange, selectedTemplate }: EnhancedLeaveFormProps) {
   const { toast } = useToast();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [leaveDays, setLeaveDays] = useState(0);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const form = useForm<LeaveFormData>({
     resolver: zodResolver(leaveFormSchema),
     defaultValues: {
-      leaveType: selectedTemplate?.leaveType || "",
-      reason: selectedTemplate?.reasonTemplate || "",
-      priority: "normal",
+      leaveType: "sick",
       fromDate: "",
       toDate: "",
+      reason: "",
       emergencyContact: "",
       emergencyPhone: "",
+      priority: "normal",
+      attachmentPath: "",
     },
   });
 
-  const createLeaveApplication = useMutation({
+  // Update form when template is selected
+  useEffect(() => {
+    if (selectedTemplate) {
+      form.setValue("leaveType", selectedTemplate.leaveType as any);
+      form.setValue("reason", selectedTemplate.reasonTemplate);
+    }
+  }, [selectedTemplate, form]);
+
+  const submitMutation = useMutation({
     mutationFn: async (data: LeaveFormData) => {
-      const formData = new FormData();
+      let attachmentPath = "";
       
-      // Calculate leave days
-      const fromDate = new Date(data.fromDate);
-      const toDate = new Date(data.toDate);
-      const calculatedDays = differenceInDays(toDate, fromDate) + 1;
-      
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value.toString());
+      // Upload file if present
+      if (uploadedFile) {
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+        
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          attachmentPath = uploadData.filePath;
         }
-      });
-      
-      formData.append('leaveDays', calculatedDays.toString());
-      formData.append('isLongLeave', (calculatedDays > 3).toString());
-      
-      if (selectedFile) {
-        formData.append('attachment', selectedFile);
       }
 
-      const res = await fetch('/api/leave-applications', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
+      const res = await apiRequest("POST", "/api/leave-applications", {
+        ...data,
+        attachmentPath,
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to submit application');
-      }
-
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leave-balance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard-stats"] });
       toast({
         title: "Application Submitted",
-        description: "Your leave application has been submitted successfully and is pending review.",
+        description: "Your leave application has been submitted successfully.",
       });
-      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications"] });
       form.reset();
-      setSelectedFile(null);
-      setLeaveDays(0);
+      setUploadedFile(null);
+      onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({
@@ -111,302 +109,289 @@ export function EnhancedLeaveForm({ open, onOpenChange, selectedTemplate }: Enha
   });
 
   const onSubmit = (data: LeaveFormData) => {
-    if (leaveDays <= 0) {
-      toast({
-        title: "Invalid Dates",
-        description: "Please select valid start and end dates.",
-        variant: "destructive",
-      });
-      return;
-    }
-    createLeaveApplication.mutate(data);
+    submitMutation.mutate(data);
   };
 
-  const handleDateChange = () => {
-    const fromDate = form.getValues('fromDate');
-    const toDate = form.getValues('toDate');
+  const calculateDays = () => {
+    const fromDate = form.watch("fromDate");
+    const toDate = form.watch("toDate");
     
     if (fromDate && toDate) {
       const from = new Date(fromDate);
       const to = new Date(toDate);
-      const days = differenceInDays(to, from) + 1;
-      setLeaveDays(Math.max(0, days));
+      const diffTime = Math.abs(to.getTime() - from.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays;
     }
+    return 0;
   };
 
-  if (!open) return null;
+  const leaveTypes = [
+    { value: "sick", label: "Sick Leave", icon: "🏥" },
+    { value: "casual", label: "Casual Leave", icon: "🌴" },
+    { value: "personal", label: "Personal Leave", icon: "👤" },
+    { value: "emergency", label: "Emergency Leave", icon: "🚨" },
+    { value: "other", label: "Other", icon: "📝" },
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto luxury-card">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Submit Leave Application
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </Button>
-          </div>
-          {selectedTemplate && (
-            <Badge variant="outline" className="w-fit">
-              Using Template: {selectedTemplate.leaveType}
-            </Badge>
-          )}
-        </CardHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="w-6 h-6 text-blue-600" />
+            Enhanced Leave Application
+          </DialogTitle>
+        </DialogHeader>
 
-        <CardContent className="space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              
-              {/* Leave Type and Priority */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="leaveType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Leave Type
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select leave type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="sick">Sick Leave</SelectItem>
-                          <SelectItem value="casual">Casual Leave</SelectItem>
-                          <SelectItem value="personal">Personal Leave</SelectItem>
-                          <SelectItem value="emergency">Emergency Leave</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" />
-                        Priority
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Date Selection */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fromDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        From Date
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleDateChange();
-                          }}
-                          min={format(new Date(), 'yyyy-MM-dd')}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="toDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        To Date
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleDateChange();
-                          }}
-                          min={form.getValues('fromDate') || format(new Date(), 'yyyy-MM-dd')}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Leave Duration Display */}
-              {leaveDays > 0 && (
-                <Alert className={leaveDays > 3 ? "border-orange-200 bg-orange-50" : "border-green-200 bg-green-50"}>
-                  <Clock className="h-4 w-4" />
-                  <AlertDescription>
-                    <span className="font-medium">Duration: {leaveDays} day{leaveDays > 1 ? 's' : ''}</span>
-                    {leaveDays > 3 && (
-                      <span className="block text-sm mt-1 text-orange-600">
-                        Long leave (4+ days) requires additional approval levels
-                      </span>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Reason */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            {/* Leave Type and Priority */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="reason"
+                name="leaveType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reason for Leave</FormLabel>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Leave Type
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select leave type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {leaveTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <span className="flex items-center gap-2">
+                              <span>{type.icon}</span>
+                              {type.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Priority
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="normal">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            Normal
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="urgent">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                            Urgent
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="fromDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      From Date
+                    </FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Please provide detailed reason for your leave application..."
-                        rows={4}
-                        {...field}
-                      />
+                      <Input type="date" {...field} min={new Date().toISOString().split('T')[0]} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Emergency Contact Information */}
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                  Emergency Contact (Optional)
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="emergencyContact"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          Contact Name
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Emergency contact name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="toDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      To Date
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        min={form.watch("fromDate") || new Date().toISOString().split('T')[0]} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-                  <FormField
-                    control={form.control}
-                    name="emergencyPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          Contact Phone
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Emergency contact phone" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-3">
-                <FormLabel className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  Supporting Documents (Optional)
-                </FormLabel>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <input
-                    type="file"
-                    id="attachment"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setSelectedFile(file);
-                      }
-                    }}
-                  />
-                  <label htmlFor="attachment" className="cursor-pointer">
-                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600">
-                      Click to upload supporting documents
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      PDF, DOC, DOCX, JPG, PNG (Max 5MB)
-                    </p>
-                  </label>
-                  {selectedFile && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                      Selected: {selectedFile.name}
-                    </div>
+            {/* Duration Display */}
+            {calculateDays() > 0 && (
+              <div className="flex items-center justify-center">
+                <Badge variant="secondary" className="px-4 py-2 text-sm">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Duration: {calculateDays()} day(s)
+                  {calculateDays() > 3 && (
+                    <span className="ml-2 text-orange-600">(Requires HOD approval)</span>
                   )}
-                </div>
+                </Badge>
               </div>
+            )}
 
-              {/* Submit Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={createLeaveApplication.isPending || leaveDays <= 0}
-                  className="flex-1 luxury-button"
-                >
-                  {createLeaveApplication.isPending ? "Submitting..." : "Submit Application"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="px-6"
-                >
-                  Cancel
-                </Button>
+            {/* Reason */}
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason for Leave</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Please provide a detailed reason for your leave application..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Emergency Contact Information */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">Emergency Contact (Optional)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="emergencyContact"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Contact Person
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Emergency contact name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="emergencyPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Phone Number
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Emergency contact phone" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-4">
+              <FormLabel className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Supporting Documents (Optional)
+              </FormLabel>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center justify-center space-y-2"
+                >
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    Click to upload or drag and drop
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    PDF, DOC, DOCX, JPG, PNG (max 10MB)
+                  </span>
+                </label>
+                {uploadedFile && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded flex items-center justify-between">
+                    <span className="text-sm text-blue-700">{uploadedFile.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUploadedFile(null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={submitMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitMutation.isPending}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                {submitMutation.isPending ? "Submitting..." : "Submit Application"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
