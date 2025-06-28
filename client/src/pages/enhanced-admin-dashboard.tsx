@@ -185,7 +185,7 @@ export default function EnhancedAdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4 max-h-64 overflow-y-auto">
-                    {pendingApplications.slice(0, 5).map((app: LeaveApplication) => (
+                    {Array.isArray(pendingApplications) && pendingApplications.slice(0, 5).map((app: LeaveApplication) => (
                       <div key={app.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">

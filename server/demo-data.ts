@@ -56,19 +56,26 @@ export async function initializeDemoData() {
     await storage.createLeaveBalance(adminUser.id, new Date().getFullYear());
 
     // Create demo leave applications
+    const fromDate1 = new Date(Date.now() + 86400000); // Tomorrow
+    const toDate1 = new Date(Date.now() + 172800000); // Day after tomorrow
+    const leaveDays1 = Math.ceil((toDate1.getTime() - fromDate1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
     const studentLeaveApp = await storage.createLeaveApplication(studentUser.id, {
       leaveType: "sick",
-      fromDate: new Date(Date.now() + 86400000), // Tomorrow
-      toDate: new Date(Date.now() + 172800000), // Day after tomorrow
+      fromDate: fromDate1,
+      toDate: toDate1,
       reason: "Suffering from fever and need medical attention",
       priority: "normal",
       attachmentPath: null
     });
 
+    const fromDate2 = new Date(Date.now() + 259200000); // 3 days from now
+    const toDate2 = new Date(Date.now() + 518400000); // 6 days from now
+
     const facultyLeaveApp = await storage.createLeaveApplication(facultyUser.id, {
       leaveType: "personal",
-      fromDate: new Date(Date.now() + 259200000), // 3 days from now
-      toDate: new Date(Date.now() + 518400000), // 6 days from now
+      fromDate: fromDate2,
+      toDate: toDate2,
       reason: "Attending family function in hometown",
       priority: "normal",
       attachmentPath: null
