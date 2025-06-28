@@ -345,7 +345,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Global function to send real-time notifications
-  global.sendRealtimeNotification = (userId: number, notification: any) => {
+  (global as any).sendRealtimeNotification = (userId: number, notification: any) => {
     const sockets = userSockets.get(userId) || [];
     sockets.forEach(socket => {
       if (socket.readyState === WebSocket.OPEN) {

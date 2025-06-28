@@ -176,11 +176,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   fullName: true,
   role: true,
   studentId: true,
+  employeeId: true,
   department: true,
   year: true,
   semester: true,
   designation: true,
   phoneNumber: true,
+  address: true,
 });
 
 export const insertLeaveApplicationSchema = createInsertSchema(leaveApplications).pick({
