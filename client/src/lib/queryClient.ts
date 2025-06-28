@@ -65,11 +65,21 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: (failureCount, error) => {
+        if (error instanceof Error && error.message.includes("Network connection failed")) {
+          return failureCount < 2;
+        }
+        return false;
+      },
     },
     mutations: {
-      retry: false,
+      retry: (failureCount, error) => {
+        if (error instanceof Error && error.message.includes("Network connection failed")) {
+          return failureCount < 1;
+        }
+        return false;
+      },
     },
   },
 });

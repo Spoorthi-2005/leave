@@ -22,7 +22,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'gvpcew-leave-management-secret-key',
+    secret: process.env.SESSION_SECRET || 'gvpcew-leave-management-secret-key-2024',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
@@ -30,7 +30,9 @@ export function setupAuth(app: Express) {
       secure: false,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
+      sameSite: 'lax',
     },
+    name: 'gvpcew.sid',
   };
 
   app.set("trust proxy", 1);
@@ -72,8 +74,21 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        return res.status(500).json({ error: "Authentication error" });
+      }
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Login error" });
+        }
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
