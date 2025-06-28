@@ -113,7 +113,7 @@ export default function EnhancedAuthPage() {
             </h2>
             
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto lg:mx-0">
-              Government Vishweshwaraya Polytechnic College for Engineering Women - 
+              Gayatri Vidya Parishad College of Engineering for Women - 
               Advanced leave management with multi-level approval workflows
             </p>
           </div>

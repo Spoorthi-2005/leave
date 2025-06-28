@@ -1,7 +1,7 @@
 # GVPCEW Leave Management System
 
 ## Project Overview
-A comprehensive university leave management system for GVPCEW with multi-role functionality, database persistence, and advanced workflow management.
+A comprehensive leave management system for Gayatri Vidya Parishad College of Engineering for Women (GVPCEW) with multi-role functionality, database persistence, and advanced workflow management.
 
 ## User Requirements
 - Database persistence for all user data and leave applications
