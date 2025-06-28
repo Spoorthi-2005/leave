@@ -181,6 +181,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   department: true,
   year: true,
   semester: true,
+  section: true,
   designation: true,
   phoneNumber: true,
   address: true,

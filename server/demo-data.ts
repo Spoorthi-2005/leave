@@ -137,7 +137,7 @@ export async function initializeDemoData() {
     const toDate1 = new Date(Date.now() + 172800000); // Day after tomorrow
     const leaveDays1 = Math.ceil((toDate1.getTime() - fromDate1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    const studentLeaveApp = await storage.createLeaveApplication(studentUser.id, {
+    const studentLeaveApp = await storage.createLeaveApplication(studentCSE1.id, {
       leaveType: "sick",
       fromDate: fromDate1,
       toDate: toDate1,
@@ -161,11 +161,11 @@ export async function initializeDemoData() {
     // Create demo notifications
     await storage.createNotification(adminUser.id, {
       title: "New Leave Application",
-      message: `${studentUser.fullName} has submitted a sick leave application`,
+      message: `${studentCSE1.fullName} has submitted a sick leave application`,
       type: "info"
     });
 
-    await storage.createNotification(studentUser.id, {
+    await storage.createNotification(studentCSE1.id, {
       title: "Welcome to GVPCEW",
       message: "Your account has been successfully created. You can now submit leave applications.",
       type: "success"
@@ -177,10 +177,11 @@ export async function initializeDemoData() {
       type: "info"
     });
 
-    console.log("Demo data initialized successfully:");
+    console.log("GVPCEW Demo data initialized successfully:");
     console.log("- Admin: admin/password");
     console.log("- Faculty: faculty1/password");
-    console.log("- Student: student1/password");
+    console.log("- Class Teachers: gowthami/password, ysowmya/password, mpavani/password");
+    console.log("- Students: student1/password (CSE1), student2/password (CSE2), student3/password (CSE3)");
 
   } catch (error) {
     console.error("Error initializing demo data:", error);
