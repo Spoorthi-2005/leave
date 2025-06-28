@@ -9,11 +9,15 @@ export async function initializeDemoData() {
       return;
     }
 
+    // Import hash function for consistent password hashing
+    const bcrypt = await import("bcrypt");
+    const hashedPassword = await bcrypt.hash("password", 10);
+
     // Create demo users
     const adminUser = await storage.createUser({
       username: "admin",
       email: "admin@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W", // password: "password"
+      password: hashedPassword,
       fullName: "Dr. Priya Sharma",
       role: "admin",
       department: "Computer Science Engineering",
@@ -26,7 +30,7 @@ export async function initializeDemoData() {
     const facultyUser = await storage.createUser({
       username: "faculty1",
       email: "faculty1@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Prof. Lakshmi Devi",
       role: "faculty",
       department: "Computer Science Engineering",
@@ -40,7 +44,7 @@ export async function initializeDemoData() {
     const gowthami = await storage.createUser({
       username: "gowthami",
       email: "gowthami@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Gowthami",
       role: "faculty",
       department: "Computer Science Engineering",
@@ -53,7 +57,7 @@ export async function initializeDemoData() {
     const ySowmya = await storage.createUser({
       username: "ysowmya",
       email: "ysowmya@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Y Sowmya",
       role: "faculty",
       department: "Computer Science Engineering",
@@ -66,7 +70,7 @@ export async function initializeDemoData() {
     const mPavani = await storage.createUser({
       username: "mpavani",
       email: "mpavani@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "M Pavani",
       role: "faculty",
       department: "Computer Science Engineering",
@@ -80,7 +84,7 @@ export async function initializeDemoData() {
     const studentCSE1 = await storage.createUser({
       username: "student1",
       email: "student1@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Priya Sharma",
       role: "student",
       department: "Computer Science Engineering",
@@ -95,7 +99,7 @@ export async function initializeDemoData() {
     const studentCSE2 = await storage.createUser({
       username: "student2",
       email: "student2@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Ananya Reddy",
       role: "student",
       department: "Computer Science Engineering",
@@ -110,7 +114,7 @@ export async function initializeDemoData() {
     const studentCSE3 = await storage.createUser({
       username: "student3",
       email: "student3@gvpcew.edu.in",
-      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      password: hashedPassword,
       fullName: "Kavya Krishnan",
       role: "student",
       department: "Computer Science Engineering",
