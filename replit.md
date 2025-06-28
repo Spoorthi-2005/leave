@@ -32,12 +32,20 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
-- Database migration from memory to PostgreSQL
+- Database migration from memory to PostgreSQL with pendingLeaves field
 - Enhanced session management with proper authentication
-- Multi-level approval workflow implementation
+- Multi-level approval workflow implementation with leave balance tracking
 - Real-time WebSocket notifications
 - Advanced UI components: Calendar, Analytics, Templates
 - Role-based dashboard themes and functionality
+- Student data import system from Excel file (GVPCEW 4th year students)
+- Comprehensive leave balance management:
+  * Available leaves reduce when application is submitted (moved to pending)
+  * Pending leaves convert to used leaves when approved
+  * Pending leaves return to available when rejected
+  * Automatic leave days calculation and validation
+- Section-specific class teacher assignments (CSE1: Gowthami, CSE2: Y Sowmya, CSE3: M Pavani)
+- College name corrected to "Gayatri Vidya Parishad College of Engineering for Women"
 
 ## Technical Decisions
 - Using Drizzle ORM for type-safe database operations

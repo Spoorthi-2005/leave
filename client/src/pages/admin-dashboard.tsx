@@ -44,9 +44,31 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users/all"],
     enabled: !!user,
+  });
+
+  // Import students mutation
+  const importStudentsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/import-students");
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Students Imported Successfully",
+        description: `${data.created} students added, ${data.skipped} already existed`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/all"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const approveApplication = useMutation({
@@ -188,6 +210,14 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <Button
+                onClick={() => importStudentsMutation.mutate()}
+                disabled={importStudentsMutation.isPending}
+                className="px-6 py-4 bg-green-600 hover:bg-green-700"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                {importStudentsMutation.isPending ? "Importing..." : "Import Students"}
+              </Button>
               <Button
                 onClick={() => logoutMutation.mutate()}
                 variant="outline"
