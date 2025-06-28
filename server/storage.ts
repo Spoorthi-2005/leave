@@ -107,11 +107,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication> {
+    const currentYear = new Date().getFullYear();
+    
+    // Get or create leave balance for the user
+    let balance = await this.getUserLeaveBalance(userId, currentYear);
+    if (!balance) {
+      balance = await this.createLeaveBalance(userId, currentYear);
+    }
+    
     // Calculate leave days
     const fromDate = new Date(application.fromDate);
     const toDate = new Date(application.toDate);
     const leaveDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const isLongLeave = leaveDays > 10;
+
+    // Check if user has enough available leave
+    const availableLeaves = balance.totalLeaves - balance.usedLeaves - balance.pendingLeaves;
+    if (availableLeaves < leaveDays) {
+      throw new Error(`Insufficient leave balance. Available: ${availableLeaves}, Requested: ${leaveDays}`);
+    }
 
     // Get user details to determine class teacher assignment
     const user = await this.getUser(userId);
@@ -154,6 +168,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Create the leave application
     const [leaveApp] = await db
       .insert(leaveApplications)
       .values({ 
@@ -165,6 +180,10 @@ export class DatabaseStorage implements IStorage {
         hodId
       })
       .returning();
+
+    // Update pending leaves count (reduce available leaves)
+    await this.updateLeaveBalance(userId, currentYear, balance.usedLeaves, balance.pendingLeaves + leaveDays);
+
     return leaveApp;
   }
 
@@ -259,13 +278,20 @@ export class DatabaseStorage implements IStorage {
     return balance;
   }
 
-  async updateLeaveBalance(userId: number, year: number, usedLeaves: number): Promise<void> {
+  async updateLeaveBalance(userId: number, year: number, usedLeaves: number, pendingLeaves?: number): Promise<void> {
     const totalLeaves = 30; // Default total leaves
-    const availableLeaves = totalLeaves - usedLeaves;
+    const updateData: any = { usedLeaves, updatedAt: new Date() };
+    
+    if (pendingLeaves !== undefined) {
+      updateData.pendingLeaves = pendingLeaves;
+    }
+    
+    const availableLeaves = totalLeaves - usedLeaves - (pendingLeaves || 0);
+    updateData.availableLeaves = availableLeaves;
     
     await db
       .update(leaveBalance)
-      .set({ usedLeaves, availableLeaves, updatedAt: new Date() })
+      .set(updateData)
       .where(and(eq(leaveBalance.userId, userId), eq(leaveBalance.year, year)));
   }
 
