@@ -107,9 +107,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLeaveApplication(userId: number, application: InsertLeaveApplication): Promise<LeaveApplication> {
+    // Calculate leave days
+    const fromDate = new Date(application.fromDate);
+    const toDate = new Date(application.toDate);
+    const leaveDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const isLongLeave = leaveDays > 10;
+
+    // Get user details to determine class teacher assignment
+    const user = await this.getUser(userId);
+    let classTeacherId = null;
+    let hodId = null;
+
+    if (user && user.role === 'student' && user.section) {
+      // GVPCEW section-specific class teacher assignments
+      const classTeacherMap: Record<string, string> = {
+        'CSE1': 'Gowthami',
+        'CSE2': 'Y Sowmya', 
+        'CSE3': 'M Pavani'
+      };
+
+      const teacherName = classTeacherMap[user.section.toUpperCase()];
+      if (teacherName) {
+        // Find the class teacher by name
+        const [classTeacher] = await db
+          .select()
+          .from(users)
+          .where(eq(users.fullName, teacherName))
+          .limit(1);
+        
+        if (classTeacher) {
+          classTeacherId = classTeacher.id;
+        }
+      }
+
+      // For long leaves (>10 days), also assign HOD
+      if (isLongLeave) {
+        const [hod] = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, 'admin'))
+          .limit(1);
+        
+        if (hod) {
+          hodId = hod.id;
+        }
+      }
+    }
+
     const [leaveApp] = await db
       .insert(leaveApplications)
-      .values({ ...application, userId })
+      .values({ 
+        ...application, 
+        userId,
+        leaveDays,
+        isLongLeave,
+        classTeacherId,
+        hodId
+      })
       .returning();
     return leaveApp;
   }

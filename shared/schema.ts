@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   department: text("department"),
   year: integer("year"),
   semester: integer("semester"),
+  section: text("section"), // CSE1, CSE2, CSE3
   designation: text("designation"),
   phoneNumber: text("phone_number"),
   classTeacherId: integer("class_teacher_id"),

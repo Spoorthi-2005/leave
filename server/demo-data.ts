@@ -36,24 +36,101 @@ export async function initializeDemoData() {
       address: "Faculty Quarters, GVPCEW"
     });
 
-    const studentUser = await storage.createUser({
+    // Create GVPCEW Class Teachers
+    const gowthami = await storage.createUser({
+      username: "gowthami",
+      email: "gowthami@gvpcew.edu.in",
+      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      fullName: "Gowthami",
+      role: "faculty",
+      department: "Computer Science Engineering",
+      designation: "Class Teacher - CSE1",
+      employeeId: "EMP003",
+      phoneNumber: "+91-9876543213",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    const ySowmya = await storage.createUser({
+      username: "ysowmya",
+      email: "ysowmya@gvpcew.edu.in",
+      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      fullName: "Y Sowmya",
+      role: "faculty",
+      department: "Computer Science Engineering",
+      designation: "Class Teacher - CSE2",
+      employeeId: "EMP004",
+      phoneNumber: "+91-9876543214",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    const mPavani = await storage.createUser({
+      username: "mpavani",
+      email: "mpavani@gvpcew.edu.in",
+      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      fullName: "M Pavani",
+      role: "faculty",
+      department: "Computer Science Engineering",
+      designation: "Class Teacher - CSE3",
+      employeeId: "EMP005",
+      phoneNumber: "+91-9876543215",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    // Create students for different sections
+    const studentCSE1 = await storage.createUser({
       username: "student1",
       email: "student1@gvpcew.edu.in",
       password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
-      fullName: "Sreeja Reddy",
+      fullName: "Priya Sharma",
       role: "student",
       department: "Computer Science Engineering",
       studentId: "20CS001",
-      year: 3,
-      semester: 1,
-      phoneNumber: "+91-9876543212",
+      year: 4,
+      semester: 8,
+      section: "CSE1",
+      phoneNumber: "+91-9876543216",
       address: "Hostel Block A, Room 201"
     });
 
-    // Create leave balances for demo users
-    await storage.createLeaveBalance(studentUser.id, new Date().getFullYear());
-    await storage.createLeaveBalance(facultyUser.id, new Date().getFullYear());
+    const studentCSE2 = await storage.createUser({
+      username: "student2",
+      email: "student2@gvpcew.edu.in",
+      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      fullName: "Ananya Reddy",
+      role: "student",
+      department: "Computer Science Engineering",
+      studentId: "20CS002",
+      year: 4,
+      semester: 8,
+      section: "CSE2",
+      phoneNumber: "+91-9876543217",
+      address: "Hostel Block B, Room 105"
+    });
+
+    const studentCSE3 = await storage.createUser({
+      username: "student3",
+      email: "student3@gvpcew.edu.in",
+      password: "$2a$10$8K1p/a0dLOZ0rE5R5pVpKOy8k7.8JQZ4sV5Hj9.pLm7.8TqU9vY8W",
+      fullName: "Kavya Krishnan",
+      role: "student",
+      department: "Computer Science Engineering",
+      studentId: "20CS003",
+      year: 4,
+      semester: 8,
+      section: "CSE3",
+      phoneNumber: "+91-9876543218",
+      address: "Hostel Block C, Room 303"
+    });
+
+    // Create leave balances for all users
     await storage.createLeaveBalance(adminUser.id, new Date().getFullYear());
+    await storage.createLeaveBalance(facultyUser.id, new Date().getFullYear());
+    await storage.createLeaveBalance(gowthami.id, new Date().getFullYear());
+    await storage.createLeaveBalance(ySowmya.id, new Date().getFullYear());
+    await storage.createLeaveBalance(mPavani.id, new Date().getFullYear());
+    await storage.createLeaveBalance(studentCSE1.id, new Date().getFullYear());
+    await storage.createLeaveBalance(studentCSE2.id, new Date().getFullYear());
+    await storage.createLeaveBalance(studentCSE3.id, new Date().getFullYear());
 
     // Create demo leave applications
     const fromDate1 = new Date(Date.now() + 86400000); // Tomorrow
