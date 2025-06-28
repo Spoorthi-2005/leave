@@ -217,6 +217,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined> {
+    // Get the application first to update leave balance
+    const application = await this.getLeaveApplicationById(id);
+    if (!application) return undefined;
+    
+    const currentYear = new Date().getFullYear();
+    const balance = await this.getUserLeaveBalance(application.userId, currentYear);
+    
+    if (balance) {
+      if (status === 'approved') {
+        // Move from pending to used leaves
+        const newUsedLeaves = balance.usedLeaves + application.leaveDays;
+        const newPendingLeaves = balance.pendingLeaves - application.leaveDays;
+        await this.updateLeaveBalance(application.userId, currentYear, newUsedLeaves, Math.max(0, newPendingLeaves));
+      } else if (status === 'rejected') {
+        // Return pending leaves to available
+        const newPendingLeaves = balance.pendingLeaves - application.leaveDays;
+        await this.updateLeaveBalance(application.userId, currentYear, balance.usedLeaves, Math.max(0, newPendingLeaves));
+      }
+    }
+
     const [updatedApp] = await db
       .update(leaveApplications)
       .set({ 

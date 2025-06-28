@@ -40,6 +40,7 @@ export const leaveBalance = pgTable("leave_balance", {
   userId: integer("user_id").references(() => users.id).notNull(),
   totalLeaves: integer("total_leaves").default(30).notNull(),
   usedLeaves: integer("used_leaves").default(0).notNull(),
+  pendingLeaves: integer("pending_leaves").default(0).notNull(),
   availableLeaves: integer("available_leaves").default(30).notNull(),
   year: integer("year").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

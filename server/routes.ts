@@ -16,6 +16,25 @@ export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // Import students from Excel file
+  app.post("/api/admin/import-students", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== 'admin') {
+      return res.sendStatus(403);
+    }
+    
+    try {
+      const { importStudentData } = await import('./student-data-import');
+      const result = await importStudentData();
+      res.json({
+        message: "Student data imported successfully",
+        ...result
+      });
+    } catch (error) {
+      console.error("Error importing student data:", error);
+      res.status(500).json({ error: "Failed to import student data" });
+    }
+  });
+
   // Leave Applications Routes
   app.post("/api/leave-applications", upload.single('attachment'), async (req, res) => {
     try {
