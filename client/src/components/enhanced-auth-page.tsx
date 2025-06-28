@@ -430,67 +430,95 @@ export default function EnhancedAuthPage() {
 
                       {/* Student-specific fields */}
                       {registerForm.watch("role") === "student" && (
-                        <div className="grid grid-cols-3 gap-3">
-                          <FormField
-                            control={registerForm.control}
-                            name="studentId"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Student ID</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Student ID" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                        <>
+                          <div className="grid grid-cols-3 gap-3">
+                            <FormField
+                              control={registerForm.control}
+                              name="studentId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Student ID</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Student ID" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
+                            <FormField
+                              control={registerForm.control}
+                              name="year"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Year</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Year" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1st Year</SelectItem>
+                                      <SelectItem value="2">2nd Year</SelectItem>
+                                      <SelectItem value="3">3rd Year</SelectItem>
+                                      <SelectItem value="4">4th Year</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={registerForm.control}
+                              name="semester"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Semester</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Sem" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">I</SelectItem>
+                                      <SelectItem value="2">II</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
                           <FormField
                             control={registerForm.control}
-                            name="year"
+                            name="section"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Year</FormLabel>
-                                <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                                <FormLabel className="flex items-center gap-2">
+                                  <Users className="w-4 h-4" />
+                                  Section (for CSE 4th Year Students)
+                                </FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Year" />
+                                      <SelectValue placeholder="Select your section" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="1">1st Year</SelectItem>
-                                    <SelectItem value="2">2nd Year</SelectItem>
-                                    <SelectItem value="3">3rd Year</SelectItem>
-                                    <SelectItem value="4">4th Year</SelectItem>
+                                    <SelectItem value="CSE1">CSE1 - Class Teacher: Gowthami</SelectItem>
+                                    <SelectItem value="CSE2">CSE2 - Class Teacher: Y Sowmya</SelectItem>
+                                    <SelectItem value="CSE3">CSE3 - Class Teacher: M Pavani</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-
-                          <FormField
-                            control={registerForm.control}
-                            name="semester"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Semester</FormLabel>
-                                <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Sem" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="1">I</SelectItem>
-                                    <SelectItem value="2">II</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                        </>
                       )}
 
                       {/* Faculty-specific fields */}
