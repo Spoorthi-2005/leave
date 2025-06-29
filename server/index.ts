@@ -4,8 +4,15 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDemoData } from "./demo-data";
 import { initializeUniversityData } from "./university-data";
+import { securityConfig } from "./security";
 
 const app = express();
+
+// Enhanced security headers
+app.use(securityConfig.middleware.headers);
+
+// Rate limiting for general requests
+app.use(securityConfig.rateLimits.general);
 
 // Enhanced CORS configuration to fix DOMException
 app.use(cors({
@@ -18,6 +25,12 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Input sanitization for all requests
+app.use(securityConfig.middleware.sanitizeInput);
+
+// Session validation
+app.use(securityConfig.middleware.validateSession);
 
 app.use((req, res, next) => {
   const start = Date.now();

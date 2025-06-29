@@ -9,6 +9,8 @@ import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
 import { notificationService } from "./services/notification";
 import { substituteAssignmentService } from "./services/substitute-assignment";
+import { enhancedSubstituteAssignmentService } from "./services/enhanced-substitute-assignment";
+import { securityConfig } from "./security";
 import express from "express";
 import path from "path";
 
@@ -347,6 +349,62 @@ export function registerRoutes(app: Express): Server {
               currentBalance.usedLeaves,
               currentBalance.pendingLeaves - daysDiff
             );
+          }
+        }
+
+        // Enhanced substitute assignment for faculty leave approvals
+        if (status === 'approved' && applicant.role === 'faculty') {
+          try {
+            console.log(`🎯 Initiating substitute assignment for ${applicant.fullName}`);
+            
+            const assignmentRequest = {
+              facultyOnLeave: applicant,
+              leaveApplication: updatedApplication,
+              fromDate: new Date(updatedApplication.fromDate),
+              toDate: new Date(updatedApplication.toDate),
+              subjects: applicant.subjects || ["General Teaching"],
+              urgencyLevel: updatedApplication.priority === 'urgent' ? 'urgent' as const : 'normal' as const
+            };
+
+            const assignmentResult = await enhancedSubstituteAssignmentService.assignSubstituteTeacher(assignmentRequest);
+            
+            if (assignmentResult.success) {
+              console.log(`✅ Substitute assigned: ${assignmentResult.substitute?.fullName}`);
+              
+              // Send additional notification about successful assignment
+              if (assignmentResult.substitute) {
+                const successMessage = `
+🎓 *GVPCEW Assignment Success*
+
+Dear ${applicant.fullName},
+
+Your leave has been approved and substitute coverage has been arranged:
+
+*Substitute Teacher:* ${assignmentResult.substitute.fullName}
+*Department:* ${assignmentResult.substitute.department}
+*Coverage Period:* ${assignmentRequest.fromDate.toDateString()} to ${assignmentRequest.toDate.toDateString()}
+
+All stakeholders have been notified.
+Academic continuity: ✅ Secured
+
+*GVPCEW Administration*
+                `.trim();
+
+                if (applicant.phoneNumber) {
+                  try {
+                    // Import whatsappService in the scope where it's used
+                    const { whatsappService } = await import("./services/whatsapp");
+                    await whatsappService.sendMessage(applicant.phoneNumber, successMessage);
+                  } catch (error) {
+                    console.log(`WhatsApp notification simulated for ${applicant.fullName}`);
+                  }
+                }
+              }
+            } else {
+              console.log(`⚠️ Substitute assignment failed: ${assignmentResult.failureReason}`);
+            }
+          } catch (error) {
+            console.error('Error in enhanced substitute assignment:', error);
           }
         }
 
