@@ -29,9 +29,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Input sanitization for all requests
 app.use(securityConfig.middleware.sanitizeInput);
 
-// Session validation
-app.use(securityConfig.middleware.validateSession);
-
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

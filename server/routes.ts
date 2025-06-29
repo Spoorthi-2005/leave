@@ -362,7 +362,7 @@ export function registerRoutes(app: Express): Server {
               leaveApplication: updatedApplication,
               fromDate: new Date(updatedApplication.fromDate),
               toDate: new Date(updatedApplication.toDate),
-              subjects: applicant.subjects || ["General Teaching"],
+              subjects: (applicant.subjects && Array.isArray(applicant.subjects)) ? applicant.subjects : ["General Teaching"],
               urgencyLevel: updatedApplication.priority === 'urgent' ? 'urgent' as const : 'normal' as const
             };
 
