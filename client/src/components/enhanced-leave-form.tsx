@@ -17,13 +17,25 @@ import { z } from "zod";
 
 const leaveFormSchema = z.object({
   leaveType: z.enum(["sick", "casual", "personal", "emergency", "other"]),
-  fromDate: z.string(),
+  fromDate: z.string().refine((date) => {
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    return selectedDate >= today;
+  }, "Leave date cannot be in the past"),
   toDate: z.string(),
   reason: z.string().min(10, "Reason must be at least 10 characters"),
   priority: z.enum(["normal", "urgent"]).optional(),
   emergencyContact: z.string().optional(),
   emergencyPhone: z.string().optional(),
   attachmentPath: z.string().optional(),
+}).refine((data) => {
+  const fromDate = new Date(data.fromDate);
+  const toDate = new Date(data.toDate);
+  return toDate >= fromDate;
+}, {
+  message: "End date must be after or equal to start date",
+  path: ["toDate"],
 });
 
 type LeaveFormData = z.infer<typeof leaveFormSchema>;
@@ -228,7 +240,32 @@ export function EnhancedLeaveForm({ open, onOpenChange, selectedTemplate }: Enha
                       From Date
                     </FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} min={new Date().toISOString().split('T')[0]} />
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          const selectedDate = new Date(e.target.value);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          if (selectedDate < today) {
+                            toast({
+                              title: "Invalid Date Selection",
+                              description: "Cannot select past dates for leave application. Please choose today or a future date.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
+                          field.onChange(e.target.value);
+                          // Auto-update toDate if it's before fromDate
+                          const currentToDate = form.getValues("toDate");
+                          if (currentToDate && new Date(currentToDate) < selectedDate) {
+                            form.setValue("toDate", e.target.value);
+                          }
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,7 +285,33 @@ export function EnhancedLeaveForm({ open, onOpenChange, selectedTemplate }: Enha
                       <Input 
                         type="date" 
                         {...field} 
-                        min={form.watch("fromDate") || new Date().toISOString().split('T')[0]} 
+                        min={form.watch("fromDate") || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          const selectedToDate = new Date(e.target.value);
+                          const fromDate = form.getValues("fromDate");
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          if (selectedToDate < today) {
+                            toast({
+                              title: "Invalid Date Selection",
+                              description: "End date cannot be in the past. Please choose today or a future date.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
+                          if (fromDate && selectedToDate < new Date(fromDate)) {
+                            toast({
+                              title: "Invalid Date Range",
+                              description: "End date must be after or equal to start date.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
+                          field.onChange(e.target.value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
