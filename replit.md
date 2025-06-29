@@ -32,6 +32,12 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
+- **DOMException & Network Stability Fixes (Jan 29, 2025)**:
+  * Implemented comprehensive error boundary system for graceful DOMException handling
+  * Enhanced query client with retry logic, exponential backoff, and timeout management
+  * Added robust WebSocket connection handling with automatic reconnection
+  * Improved CORS configuration with proper headers and cache control
+  * Enhanced server-side error handling with detailed logging and response formatting
 - **Critical System Fixes (Jan 29, 2025)**: 
   * Fixed leave calculation error where 1-day applications were reducing balance by 4 days
   * Corrected Math.ceil to Math.floor for proper inclusive date range calculation
