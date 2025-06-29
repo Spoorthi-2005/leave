@@ -61,11 +61,26 @@ export function registerRoutes(app: Express): Server {
 
       if (user.role === 'student') {
         // Student workflow: Class Teacher -> HOD (if long leave)
-        if (user.classTeacherId) {
-          const classTeacher = await storage.getUser(user.classTeacherId);
-          if (classTeacher) {
-            reviewers.push(classTeacher);
-            notificationMessage = `Student ${user.fullName} has submitted a ${applicationData.leaveType} leave application (${application.leaveDays} days)`;
+        // Find class teacher based on student's section
+        const section = user.section;
+        let classTeacher = null;
+        
+        if (section === 'CSE1') {
+          classTeacher = await storage.getUserByUsername('gowthami');
+        } else if (section === 'CSE2') {
+          classTeacher = await storage.getUserByUsername('ysowmya');
+        } else if (section === 'CSE3') {
+          classTeacher = await storage.getUserByUsername('mpavani');
+        }
+        
+        if (classTeacher) {
+          reviewers.push(classTeacher);
+          notificationMessage = `Student ${user.fullName} from ${section} has submitted a ${applicationData.leaveType} leave application (${application.leaveDays} days)`;
+          
+          // For long leaves, also add HOD to the workflow
+          if (isLongLeave) {
+            const hodUsers = await storage.getUsersByRole('admin'); // HOD has admin role
+            reviewers.push(...hodUsers);
           }
         }
       } else if (user.role === 'faculty') {

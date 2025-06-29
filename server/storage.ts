@@ -251,27 +251,99 @@ export class DatabaseStorage implements IStorage {
     return updatedApp || undefined;
   }
 
-  async getLeaveApplicationsForReview(facultyId: number): Promise<LeaveApplication[]> {
-    // Get applications from students in faculty's department/classes
-    return await db.select({
-      ...leaveApplications,
+  async getLeaveApplicationsForReview(facultyId: number): Promise<any[]> {
+    // Get faculty member details to determine their role and section responsibility
+    const faculty = await this.getUser(facultyId);
+    if (!faculty) return [];
+
+    // Class teachers see applications from their specific sections
+    // HOD sees all pending applications that need HOD approval
+    let whereConditions;
+    
+    if (faculty.designation?.includes('Class Teacher')) {
+      // Extract section from designation (e.g., "Class Teacher - CSE1" -> "CSE1")
+      const sectionMatch = faculty.designation.match(/CSE\d+/);
+      const section = sectionMatch ? sectionMatch[0] : null;
+      
+      if (section) {
+        whereConditions = and(
+          eq(leaveApplications.status, 'pending'),
+          eq(users.role, 'student'),
+          eq(users.section, section)
+        );
+      } else {
+        whereConditions = and(
+          eq(leaveApplications.status, 'pending'),
+          eq(users.role, 'student')
+        );
+      }
+    } else if (faculty.role === 'admin' || faculty.designation?.includes('HOD')) {
+      // HOD/Admin sees all pending applications or those needing HOD approval
+      whereConditions = and(
+        eq(leaveApplications.status, 'pending'),
+        eq(users.role, 'student')
+      );
+    } else {
+      // Regular faculty see all pending applications
+      whereConditions = and(
+        eq(leaveApplications.status, 'pending'),
+        eq(users.role, 'student')
+      );
+    }
+
+    const results = await db.select({
+      id: leaveApplications.id,
+      userId: leaveApplications.userId,
+      leaveType: leaveApplications.leaveType,
+      fromDate: leaveApplications.fromDate,
+      toDate: leaveApplications.toDate,
+      reason: leaveApplications.reason,
+      status: leaveApplications.status,
+      leaveDays: leaveApplications.leaveDays,
+      appliedAt: leaveApplications.appliedAt,
+      reviewedAt: leaveApplications.reviewedAt,
+      reviewedBy: leaveApplications.reviewedBy,
+      reviewComments: leaveApplications.reviewComments,
+      attachmentPath: leaveApplications.attachmentPath,
+      priority: leaveApplications.priority,
+      classTeacherId: leaveApplications.classTeacherId,
+      hodId: leaveApplications.hodId,
+      isLongLeave: leaveApplications.isLongLeave,
+      updatedAt: leaveApplications.updatedAt,
       userName: users.fullName,
       userEmail: users.email,
       studentId: users.studentId,
-      department: users.department
+      department: users.department,
+      section: users.section
     })
     .from(leaveApplications)
     .innerJoin(users, eq(leaveApplications.userId, users.id))
-    .where(and(
-      eq(leaveApplications.status, 'pending'),
-      eq(users.role, 'student')
-    ))
+    .where(whereConditions)
     .orderBy(desc(leaveApplications.appliedAt));
+    
+    return results as any[];
   }
 
-  async getRecentLeaveApplications(limit: number = 10): Promise<LeaveApplication[]> {
-    return await db.select({
-      ...leaveApplications,
+  async getRecentLeaveApplications(limit: number = 10): Promise<any[]> {
+    const results = await db.select({
+      id: leaveApplications.id,
+      userId: leaveApplications.userId,
+      leaveType: leaveApplications.leaveType,
+      fromDate: leaveApplications.fromDate,
+      toDate: leaveApplications.toDate,
+      reason: leaveApplications.reason,
+      status: leaveApplications.status,
+      leaveDays: leaveApplications.leaveDays,
+      appliedAt: leaveApplications.appliedAt,
+      reviewedAt: leaveApplications.reviewedAt,
+      reviewedBy: leaveApplications.reviewedBy,
+      reviewComments: leaveApplications.reviewComments,
+      attachmentPath: leaveApplications.attachmentPath,
+      priority: leaveApplications.priority,
+      classTeacherId: leaveApplications.classTeacherId,
+      hodId: leaveApplications.hodId,
+      isLongLeave: leaveApplications.isLongLeave,
+      updatedAt: leaveApplications.updatedAt,
       userName: users.fullName,
       userEmail: users.email,
       studentId: users.studentId
@@ -280,6 +352,8 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(users, eq(leaveApplications.userId, users.id))
     .orderBy(desc(leaveApplications.appliedAt))
     .limit(limit);
+    
+    return results as any[];
   }
 
   async getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined> {
