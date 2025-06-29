@@ -16,6 +16,57 @@ export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // User Applications Route
+  app.get("/api/leave-applications/user", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const userId = req.user!.id;
+      const applications = await storage.getUserLeaveApplications(userId);
+
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching user applications:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // All Users Route
+  app.get("/api/users/all", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const students = await storage.getUsersByRole('student');
+      const faculty = await storage.getUsersByRole('faculty');
+      const admins = await storage.getUsersByRole('admin');
+      const allUsers = [...students, ...faculty, ...admins];
+
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // System Stats Route
+  app.get("/api/dashboard/system-stats", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const stats = await storage.getSystemStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching system stats:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Import students from Excel file
   app.post("/api/admin/import-students", async (req, res) => {
     if (!req.isAuthenticated() || req.user!.role !== 'admin') {

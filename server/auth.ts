@@ -22,17 +22,17 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'gvpcew-leave-management-secret-key-2024',
-    resave: false,
-    saveUninitialized: false,
+    secret: process.env.SESSION_SECRET || 'gvpcew-leave-management-secure-secret-2024',
+    resave: true,
+    saveUninitialized: true,
     store: storage.sessionStore,
     cookie: {
       secure: false,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-      sameSite: 'lax',
+      httpOnly: false,
+      sameSite: 'none',
     },
-    name: 'gvpcew.sid',
+    name: 'connect.sid',
   };
 
   app.set("trust proxy", 1);
