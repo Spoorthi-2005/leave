@@ -20,14 +20,29 @@ export function useWebSocket() {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
+        // Add connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState === WebSocket.CONNECTING) {
+            console.warn("WebSocket connection timeout, closing...");
+            ws.close();
+          }
+        }, 10000);
+
         ws.onopen = () => {
-          console.log("WebSocket connected");
+          console.log("WebSocket connected successfully");
+          clearTimeout(connectionTimeout);
+          
           // Send user identification
-          ws.send(JSON.stringify({
-            type: "auth",
-            userId: user.id,
-            role: user.role
-          }));
+          try {
+            ws.send(JSON.stringify({
+              type: "auth",
+              userId: user.id,
+              role: user.role,
+              timestamp: new Date().toISOString()
+            }));
+          } catch (error) {
+            console.error("Error sending WebSocket auth:", error);
+          }
         };
 
         ws.onmessage = (event) => {
@@ -80,21 +95,35 @@ export function useWebSocket() {
           }
         };
 
-        ws.onclose = () => {
-          console.log("WebSocket disconnected");
+        ws.onclose = (event) => {
+          console.log("WebSocket disconnected:", event.code, event.reason);
           wsRef.current = null;
           
-          // Reconnect after 3 seconds
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, 3000);
+          // Only attempt reconnection if not a manual close
+          if (event.code !== 1000) {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              console.log("Attempting WebSocket reconnection...");
+              connect();
+            }, 3000);
+          }
         };
 
         ws.onerror = (error) => {
-          console.error("WebSocket error:", error);
+          console.error("WebSocket connection error:", error);
+          // Handle DOMException and other WebSocket errors gracefully
+          if (error instanceof Event && error.type === 'error') {
+            console.warn("WebSocket connection failed, will retry...");
+          }
         };
       } catch (error) {
         console.error("Failed to create WebSocket connection:", error);
+        // Handle DOMException and other connection errors
+        if (error instanceof DOMException || error instanceof Error) {
+          console.warn("WebSocket creation failed, will retry in 5 seconds...");
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+          }, 5000);
+        }
       }
     };
 

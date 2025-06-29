@@ -494,11 +494,44 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
 
   // WebSocket server for real-time notifications
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    perMessageDeflate: false,
+    clientTracking: true,
+    skipUTF8Validation: false
+  });
   const userSockets = new Map<number, WebSocket[]>();
 
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection');
+    console.log('New WebSocket connection established');
+    
+    // Send immediate connection confirmation
+    try {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ 
+          type: 'connection', 
+          status: 'connected',
+          timestamp: new Date().toISOString()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending connection confirmation:', error);
+    }
+
+    // Heartbeat mechanism to keep connection alive
+    const heartbeat = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.ping();
+        } catch (error) {
+          console.error('Error sending ping:', error);
+          clearInterval(heartbeat);
+        }
+      } else {
+        clearInterval(heartbeat);
+      }
+    }, 30000);
     
     ws.on('message', (data) => {
       try {
@@ -510,18 +543,56 @@ export function registerRoutes(app: Express): Server {
           }
           userSockets.get(message.userId)!.push(ws);
           
+          // Send auth confirmation
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ 
+              type: 'auth_success', 
+              userId: message.userId,
+              timestamp: new Date().toISOString()
+            }));
+          }
+          
           ws.on('close', () => {
             const sockets = userSockets.get(message.userId) || [];
             const index = sockets.indexOf(ws);
             if (index > -1) {
               sockets.splice(index, 1);
             }
+            clearInterval(heartbeat);
           });
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid message format'
+            }));
+          } catch (sendError) {
+            console.error('Error sending error message:', sendError);
+          }
+        }
       }
     });
+
+    ws.on('pong', () => {
+      // Client responded to ping - connection is alive
+    });
+
+    ws.on('close', (code, reason) => {
+      console.log('WebSocket connection closed:', code, reason);
+      clearInterval(heartbeat);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket connection error:', error);
+      clearInterval(heartbeat);
+    });
+  });
+
+  wss.on('error', (error) => {
+    console.error('WebSocket server error:', error);
   });
 
   // Global function to send real-time notifications
@@ -529,10 +600,15 @@ export function registerRoutes(app: Express): Server {
     const sockets = userSockets.get(userId) || [];
     sockets.forEach(socket => {
       if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'notification',
-          data: notification
-        }));
+        try {
+          socket.send(JSON.stringify({
+            type: 'notification',
+            data: notification,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
       }
     });
   };
