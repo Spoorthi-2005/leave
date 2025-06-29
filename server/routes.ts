@@ -7,6 +7,7 @@ import { insertLeaveApplicationSchema, insertNotificationSchema, leaveApplicatio
 import { db } from "./db";
 import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
+import { notificationService } from "./services/notification";
 import express from "express";
 import path from "path";
 
