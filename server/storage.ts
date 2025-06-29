@@ -398,13 +398,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserNotifications(userId: number, unreadOnly: boolean = false): Promise<Notification[]> {
-    let query = db.select().from(notifications).where(eq(notifications.userId, userId));
-    
     if (unreadOnly) {
-      query = query.where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+      return await db.select()
+        .from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.read, false)))
+        .orderBy(desc(notifications.createdAt));
     }
     
-    return await query.orderBy(desc(notifications.createdAt));
+    return await db.select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
   }
 
   async markNotificationAsRead(id: number): Promise<void> {

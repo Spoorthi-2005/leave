@@ -72,11 +72,38 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, async () => {
+  
+  // Graceful shutdown handling to prevent EADDRINUSE
+  process.on('SIGTERM', () => {
+    server.close(() => {
+      console.log('Server closed gracefully');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    server.close(() => {
+      console.log('Server closed gracefully');
+      process.exit(0);
+    });
+  });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`Port ${port} is busy, retrying in 2 seconds...`);
+      setTimeout(() => {
+        server.close();
+        server.listen(port, "0.0.0.0", async () => {
+          log(`serving on port ${port}`);
+          await initializeDemoData();
+        });
+      }, 2000);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+
+  server.listen(port, "0.0.0.0", async () => {
     log(`serving on port ${port}`);
     // Initialize demo data after server starts
     await initializeDemoData();
