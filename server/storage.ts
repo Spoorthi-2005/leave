@@ -39,6 +39,7 @@ export interface IStorage {
   updateLeaveApplicationStatus(id: number, status: string, reviewerId: number, comments?: string): Promise<LeaveApplication | undefined>;
   getLeaveApplicationsForReview(facultyId: number): Promise<any[]>;
   getRecentLeaveApplications(limit?: number): Promise<any[]>;
+  updateLeaveApplicationDays(id: number, leaveDays: number): Promise<void>;
 
   // Leave balance
   getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;
@@ -523,6 +524,13 @@ export class DatabaseStorage implements IStorage {
       leavesThisMonth: leavesThisMonth[0]?.count || 0,
       efficiency: 94 // This would be calculated based on processing times
     };
+  }
+
+  async updateLeaveApplicationDays(id: number, leaveDays: number): Promise<void> {
+    await db
+      .update(leaveApplications)
+      .set({ leaveDays })
+      .where(eq(leaveApplications.id, id));
   }
 }
 

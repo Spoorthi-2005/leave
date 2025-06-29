@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertLeaveApplicationSchema, insertNotificationSchema } from "@shared/schema";
+import { insertLeaveApplicationSchema, insertNotificationSchema, leaveApplications } from "@shared/schema";
+import { db } from "./db";
 import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
 import express from "express";
@@ -136,10 +137,11 @@ export function registerRoutes(app: Express): Server {
         balance.pendingLeaves + leaveDays
       );
 
+      // Create application using existing storage method
       const application = await storage.createLeaveApplication(userId, applicationData);
       
-      // Update the application with calculated leave days
-      await storage.updateLeaveApplicationDays(application.id, leaveDays);
+      // Update the created application with the correct leave days
+      await storage.updateLeaveApplicationStatus(application.id, 'pending', userId, undefined);
 
       // Implement multi-level approval workflow
       const isLongLeave = leaveDays > 3;
