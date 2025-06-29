@@ -177,6 +177,24 @@ export function registerRoutes(app: Express): Server {
         } catch (emailError) {
           console.error('Failed to send email notification:', emailError);
         }
+
+        // Send real-time WebSocket notification to reviewers
+        if (typeof (global as any).sendRealtimeNotification === 'function') {
+          reviewers.forEach(reviewer => {
+            (global as any).sendRealtimeNotification(reviewer.id, {
+              type: 'leave_application_notification',
+              applicationId: application.id,
+              applicantName: user.fullName,
+              applicantSection: user.section,
+              leaveType: applicationData.leaveType,
+              fromDate: applicationData.fromDate.toISOString(),
+              toDate: applicationData.toDate.toISOString(),
+              priority: applicationData.priority,
+              reason: applicationData.reason,
+              timestamp: new Date().toISOString()
+            });
+          });
+        }
       }
 
       res.status(201).json(application);
@@ -277,18 +295,31 @@ export function registerRoutes(app: Express): Server {
           data: { applicationId: id }
         });
 
-        // Send email notification
+        // Send comprehensive notification (email + WhatsApp)
         try {
-          await emailService.sendLeaveStatusNotification(
-            applicant.email,
-            applicant.fullName,
-            updatedApplication.leaveType,
-            status,
-            req.user!.fullName,
+          await notificationService.sendLeaveStatusNotification({
+            student: applicant,
+            application: updatedApplication,
+            status: status as 'approved' | 'rejected',
+            reviewerName: req.user!.fullName,
             comments
-          );
-        } catch (emailError) {
-          console.error('Failed to send email notification:', emailError);
+          });
+          console.log(`Notification sent to ${applicant.fullName} for ${status} application`);
+        } catch (notificationError) {
+          console.error('Failed to send notification:', notificationError);
+          // Fallback to basic email notification
+          try {
+            await emailService.sendLeaveStatusNotification(
+              applicant.email,
+              applicant.fullName,
+              updatedApplication.leaveType,
+              status,
+              req.user!.fullName,
+              comments
+            );
+          } catch (emailError) {
+            console.error('Failed to send email notification:', emailError);
+          }
         }
 
         // Update leave balance based on approval status
@@ -316,6 +347,36 @@ export function registerRoutes(app: Express): Server {
               currentBalance.pendingLeaves - daysDiff
             );
           }
+        }
+
+        // Send real-time WebSocket notification to applicant about status change
+        if (typeof (global as any).sendRealtimeNotification === 'function') {
+          (global as any).sendRealtimeNotification(applicant.id, {
+            type: 'leave_status_update',
+            applicationId: id,
+            status,
+            reviewerName: req.user!.fullName,
+            comments,
+            leaveType: updatedApplication.leaveType,
+            fromDate: updatedApplication.fromDate,
+            toDate: updatedApplication.toDate,
+            timestamp: new Date().toISOString()
+          });
+
+          // Also notify other faculty about the status change
+          const allFaculty = await storage.getUsersByRole('faculty');
+          allFaculty.forEach(faculty => {
+            if (faculty.id !== req.user!.id && faculty.id !== applicant.id) {
+              (global as any).sendRealtimeNotification(faculty.id, {
+                type: 'application_status_changed',
+                applicationId: id,
+                applicantName: applicant.fullName,
+                status,
+                reviewerName: req.user!.fullName,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
         }
       }
 
