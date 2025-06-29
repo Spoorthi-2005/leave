@@ -148,11 +148,13 @@ export async function initializeDemoData() {
       toDate: toDate1,
       reason: "Suffering from fever and need medical attention",
       priority: "normal",
-      attachmentPath: null
+      attachmentPath: null,
+      leaveDays: leaveDays1
     });
 
     const fromDate2 = new Date(Date.now() + 259200000); // 3 days from now
     const toDate2 = new Date(Date.now() + 518400000); // 6 days from now
+    const leaveDays2 = Math.ceil((toDate2.getTime() - fromDate2.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const facultyLeaveApp = await storage.createLeaveApplication(facultyUser.id, {
       leaveType: "personal",
@@ -160,7 +162,8 @@ export async function initializeDemoData() {
       toDate: toDate2,
       reason: "Attending family function in hometown",
       priority: "normal",
-      attachmentPath: null
+      attachmentPath: null,
+      leaveDays: leaveDays2
     });
 
     // Create demo notifications

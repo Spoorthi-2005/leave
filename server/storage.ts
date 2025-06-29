@@ -116,10 +116,11 @@ export class DatabaseStorage implements IStorage {
       balance = await this.createLeaveBalance(userId, currentYear);
     }
     
-    // Calculate leave days
+    // Calculate leave days correctly (inclusive date range)
     const fromDate = new Date(application.fromDate);
     const toDate = new Date(application.toDate);
-    const leaveDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const timeDiff = toDate.getTime() - fromDate.getTime();
+    const leaveDays = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
     const isLongLeave = leaveDays > 10;
 
     // Check if user has enough available leave

@@ -195,7 +195,8 @@ export const insertLeaveApplicationSchema = createInsertSchema(leaveApplications
   reason: true,
   priority: true,
   attachmentPath: true,
-  leaveDays: true,
+}).extend({
+  leaveDays: z.number().optional()
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).pick({
