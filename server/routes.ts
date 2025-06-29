@@ -8,6 +8,7 @@ import { db } from "./db";
 import { upload } from "./services/file-upload";
 import { emailService } from "./services/email";
 import { notificationService } from "./services/notification";
+import { substituteAssignmentService } from "./services/substitute-assignment";
 import express from "express";
 import path from "path";
 

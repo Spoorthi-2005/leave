@@ -31,6 +31,10 @@ export const users = pgTable("users", {
   emergencyContact: text("emergency_contact"),
   emergencyPhone: text("emergency_phone"),
   address: text("address"),
+  subjects: json("subjects"), // Array of subjects the faculty can teach
+  specialization: text("specialization"), // Faculty specialization area
+  experience: integer("experience"), // Years of teaching experience
+  qualification: text("qualification"), // Educational qualification
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
