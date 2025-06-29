@@ -1,4 +1,5 @@
 import { emailService } from './email';
+import { whatsappService } from './whatsapp';
 import type { User, LeaveApplication } from '@shared/schema';
 
 interface NotificationData {
@@ -45,19 +46,18 @@ export class NotificationService {
   }
 
   private async sendWhatsAppNotification(data: NotificationData) {
-    const { student, application, status, reviewerName } = data;
-    
-    // WhatsApp message format
-    const message = this.generateWhatsAppMessage(data);
+    const { student, application, status, reviewerName, comments } = data;
     
     try {
-      // Using Twilio WhatsApp API (if configured)
-      // This would require TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER
-      console.log(`WhatsApp notification would be sent to ${student.phoneNumber}:`, message);
-      
-      // For now, we'll log the message. In production, integrate with Twilio WhatsApp API
-      // await this.sendTwilioWhatsApp(student.phoneNumber, message);
-      
+      await whatsappService.sendLeaveNotification(
+        student.phoneNumber!,
+        student.fullName,
+        status,
+        application.leaveType,
+        reviewerName,
+        comments
+      );
+      console.log(`WhatsApp notification sent to ${student.phoneNumber} for leave ${status}`);
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
     }

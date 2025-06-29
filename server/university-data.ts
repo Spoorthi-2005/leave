@@ -46,9 +46,7 @@ export async function initializeUniversityData() {
               section: sectionCode,
               studentId: studentId,
               phoneNumber: `+91-${9000000000 + studentIdCounter}`,
-              address: `Student Hostel, Block ${section}, Room ${100 + i}`,
-              emergencyContact: generateEmergencyContact(i),
-              emergencyPhone: `+91-${8000000000 + studentIdCounter}`
+              address: `Student Hostel, Block ${section}, Room ${100 + i}`
             });
             
             students.push(student);
