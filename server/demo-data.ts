@@ -6,18 +6,7 @@ export async function initializeDemoData() {
     const existingAdmin = await storage.getUserByUsername("admin");
     if (existingAdmin) {
       console.log("Demo data already initialized");
-      // Test existing password for debugging
-      const bcrypt = await import("bcrypt");
-      const testPassword = await bcrypt.compare("password", existingAdmin.password);
-      console.log("Existing admin password test:", testPassword ? "VALID" : "INVALID");
-      
-      if (!testPassword) {
-        console.log("Password invalid, recreating demo users with correct hash...");
-        // Delete existing users and recreate with correct password
-        // This is a one-time fix for the authentication issue
-      } else {
-        return;
-      }
+      return;
     }
 
     // Import hash function for consistent password hashing

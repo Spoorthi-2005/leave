@@ -32,6 +32,7 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
+- **Authentication Issue Resolved (Jan 29, 2025)**: Fixed "Not authenticated" error during leave application submissions by correcting bcrypt password hashing in database
 - **DOMException Error Resolution (Jan 2025)**: Fixed persistent Vite connection errors with enhanced CORS configuration, network error handling, and proper authentication flow
 - Database migration from memory to PostgreSQL with pendingLeaves field
 - Enhanced session management with proper authentication and bcrypt password hashing

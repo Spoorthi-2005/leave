@@ -18,9 +18,7 @@ async function hashPassword(password: string) {
 
 async function comparePasswords(supplied: string, stored: string) {
   try {
-    const result = await bcrypt.compare(supplied, stored);
-    console.log(`Password comparison: ${result ? 'SUCCESS' : 'FAILED'}`);
-    return result;
+    return await bcrypt.compare(supplied, stored);
   } catch (error) {
     console.error('Password comparison error:', error);
     return false;
@@ -50,22 +48,16 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log(`Login attempt: ${username}`);
         const user = await storage.getUserByUsername(username);
         if (!user) {
-          console.log(`User not found: ${username}`);
           return done(null, false);
         }
         
-        console.log(`User found: ${user.username}, checking password...`);
         const passwordMatch = await comparePasswords(password, user.password);
-        
         if (!passwordMatch) {
-          console.log(`Password mismatch for user: ${username}`);
           return done(null, false);
         }
         
-        console.log(`Login successful for user: ${username}`);
         return done(null, user);
       } catch (error) {
         console.error('Login error:', error);
