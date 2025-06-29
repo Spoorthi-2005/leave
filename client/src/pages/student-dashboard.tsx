@@ -406,7 +406,7 @@ export default function StudentDashboard() {
           <TabsContent value="analytics">
             <AnalyticsDashboard 
               userRole={user.role} 
-              department={user.department}
+              department={user.department ?? undefined}
             />
           </TabsContent>
 
