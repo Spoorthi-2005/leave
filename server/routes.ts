@@ -103,11 +103,17 @@ export function registerRoutes(app: Express): Server {
         attachmentPath: req.file ? req.file.filename : undefined
       });
 
-      // Update leave balance immediately when application is submitted
+      // Calculate leave days correctly
       const currentYear = new Date().getFullYear();
       const fromDate = new Date(applicationData.fromDate);
       const toDate = new Date(applicationData.toDate);
-      const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)) + 1;
+      
+      // Fix: Proper calculation for inclusive date range
+      const timeDiff = toDate.getTime() - fromDate.getTime();
+      const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
+      
+      // Ensure minimum 1 day for same-day leaves
+      const leaveDays = Math.max(1, daysDiff);
       
       // Get or create leave balance for user
       let balance = await storage.getUserLeaveBalance(userId, currentYear);
@@ -116,9 +122,9 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Check if user has enough available leaves
-      if (balance.availableLeaves < daysDiff) {
+      if (balance.availableLeaves < leaveDays) {
         return res.status(400).json({ 
-          message: `Insufficient leave balance. You have ${balance.availableLeaves} days available but requested ${daysDiff} days.` 
+          message: `Insufficient leave balance. You have ${balance.availableLeaves} days available but requested ${leaveDays} days.` 
         });
       }
       
@@ -127,13 +133,16 @@ export function registerRoutes(app: Express): Server {
         userId, 
         currentYear, 
         balance.usedLeaves, 
-        balance.pendingLeaves + daysDiff
+        balance.pendingLeaves + leaveDays
       );
 
       const application = await storage.createLeaveApplication(userId, applicationData);
+      
+      // Update the application with calculated leave days
+      await storage.updateLeaveApplicationDays(application.id, leaveDays);
 
       // Implement multi-level approval workflow
-      const isLongLeave = application.leaveDays > 3;
+      const isLongLeave = leaveDays > 3;
       const user = req.user!;
       
       let reviewers = [];
@@ -155,7 +164,7 @@ export function registerRoutes(app: Express): Server {
         
         if (classTeacher) {
           reviewers.push(classTeacher);
-          notificationMessage = `Student ${user.fullName} from ${section} has submitted a ${applicationData.leaveType} leave application (${application.leaveDays} days)`;
+          notificationMessage = `Student ${user.fullName} from ${section} has submitted a ${applicationData.leaveType} leave application (${leaveDays} days)`;
           
           // For long leaves, also add HOD to the workflow
           if (isLongLeave) {

@@ -195,6 +195,7 @@ export const insertLeaveApplicationSchema = createInsertSchema(leaveApplications
   reason: true,
   priority: true,
   attachmentPath: true,
+  leaveDays: true,
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).pick({
