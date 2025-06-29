@@ -11,8 +11,14 @@ const app = express();
 // Enhanced security headers
 app.use(securityConfig.middleware.headers);
 
-// Rate limiting for general requests
-app.use(securityConfig.rateLimits.general);
+// Rate limiting for general requests (excluding dev assets)
+app.use((req, res, next) => {
+  // Skip rate limiting for Vite dev assets
+  if (req.path.includes('/@fs/') || req.path.includes('node_modules') || req.path.includes('.vite')) {
+    return next();
+  }
+  return securityConfig.rateLimits.general(req, res, next);
+});
 
 // Enhanced CORS configuration to fix DOMException
 app.use(cors({
