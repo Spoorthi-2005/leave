@@ -36,13 +36,15 @@ export default function FacultyDashboard() {
   });
 
   const { data: studentsToReview = [], isLoading: reviewLoading } = useQuery<LeaveApplication[]>({
-    queryKey: ["/api/leave-applications/for-review"],
+    queryKey: ["/api/leave-applications/pending"],
     enabled: !!user,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
-  const { data: leaveBalance = { availableLeaves: 30, usedLeaves: 0 } } = useQuery<{ availableLeaves: number; usedLeaves: number }>({
+  const { data: leaveBalance = { availableLeaves: 20, usedLeaves: 0, pendingLeaves: 0 } } = useQuery<{ availableLeaves: number; usedLeaves: number; pendingLeaves: number }>({
     queryKey: ["/api/leave-balance"],
     enabled: !!user,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
   const { data: notifications = [] } = useQuery<any[]>({

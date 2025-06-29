@@ -36,9 +36,10 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  const { data: leaveBalance = { availableLeaves: 30, usedLeaves: 0 } } = useQuery<{ availableLeaves: number; usedLeaves: number }>({
+  const { data: leaveBalance = { availableLeaves: 20, usedLeaves: 0, pendingLeaves: 0 } } = useQuery<{ availableLeaves: number; usedLeaves: number; pendingLeaves: number }>({
     queryKey: ["/api/leave-balance"],
     enabled: !!user,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
   const { data: notifications = [] } = useQuery<any[]>({
@@ -142,9 +143,23 @@ export default function StudentDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
-            title="Leave Balance"
-            value={`${leaveBalance.availableLeaves}/30`}
+            title="Available Leaves"
+            value={`${leaveBalance.availableLeaves}`}
             icon={Calendar}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-100"
+          />
+          <StatsCard
+            title="Pending Leaves"
+            value={`${leaveBalance.pendingLeaves}`}
+            icon={Clock}
+            iconColor="text-amber-600"
+            iconBgColor="bg-amber-100"
+          />
+          <StatsCard
+            title="Used Leaves"
+            value={`${leaveBalance.usedLeaves}`}
+            icon={CheckCircle}
             iconColor="text-blue-600"
             iconBgColor="bg-blue-100"
           />

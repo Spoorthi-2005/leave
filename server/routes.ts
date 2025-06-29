@@ -50,6 +50,33 @@ export function registerRoutes(app: Express): Server {
         attachmentPath: req.file ? req.file.filename : undefined
       });
 
+      // Update leave balance immediately when application is submitted
+      const currentYear = new Date().getFullYear();
+      const fromDate = new Date(applicationData.fromDate);
+      const toDate = new Date(applicationData.toDate);
+      const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)) + 1;
+      
+      // Get or create leave balance for user
+      let balance = await storage.getUserLeaveBalance(userId, currentYear);
+      if (!balance) {
+        balance = await storage.createLeaveBalance(userId, currentYear);
+      }
+      
+      // Check if user has enough available leaves
+      if (balance.availableLeaves < daysDiff) {
+        return res.status(400).json({ 
+          message: `Insufficient leave balance. You have ${balance.availableLeaves} days available but requested ${daysDiff} days.` 
+        });
+      }
+      
+      // Move leaves from available to pending
+      await storage.updateLeaveBalance(
+        userId, 
+        currentYear, 
+        balance.usedLeaves, 
+        balance.pendingLeaves + daysDiff
+      );
+
       const application = await storage.createLeaveApplication(userId, applicationData);
 
       // Implement multi-level approval workflow
@@ -235,16 +262,30 @@ export function registerRoutes(app: Express): Server {
           console.error('Failed to send email notification:', emailError);
         }
 
-        // Update leave balance if approved
-        if (status === 'approved') {
-          const currentYear = new Date().getFullYear();
-          const fromDate = new Date(updatedApplication.fromDate);
-          const toDate = new Date(updatedApplication.toDate);
-          const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)) + 1;
-          
-          const currentBalance = await storage.getUserLeaveBalance(applicant.id, currentYear);
-          if (currentBalance) {
-            await storage.updateLeaveBalance(applicant.id, currentYear, currentBalance.usedLeaves + daysDiff);
+        // Update leave balance based on approval status
+        const currentYear = new Date().getFullYear();
+        const fromDate = new Date(updatedApplication.fromDate);
+        const toDate = new Date(updatedApplication.toDate);
+        const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)) + 1;
+        
+        const currentBalance = await storage.getUserLeaveBalance(applicant.id, currentYear);
+        if (currentBalance) {
+          if (status === 'approved') {
+            // Move from pending to used leaves
+            await storage.updateLeaveBalance(
+              applicant.id, 
+              currentYear, 
+              currentBalance.usedLeaves + daysDiff,
+              currentBalance.pendingLeaves - daysDiff
+            );
+          } else if (status === 'rejected') {
+            // Return pending leaves back to available
+            await storage.updateLeaveBalance(
+              applicant.id, 
+              currentYear, 
+              currentBalance.usedLeaves,
+              currentBalance.pendingLeaves - daysDiff
+            );
           }
         }
       }
@@ -307,6 +348,28 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error('Error fetching all applications:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Leave Balance Routes
+  app.get("/api/leave-balance", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const userId = req.user!.id;
+      const currentYear = new Date().getFullYear();
+      
+      let balance = await storage.getUserLeaveBalance(userId, currentYear);
+      if (!balance) {
+        balance = await storage.createLeaveBalance(userId, currentYear);
+      }
+      
+      res.json(balance);
+    } catch (error) {
+      console.error('Error fetching leave balance:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
