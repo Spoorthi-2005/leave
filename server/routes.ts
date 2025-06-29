@@ -681,12 +681,9 @@ export function registerRoutes(app: Express): Server {
       const departments = [
         { code: "CSE", name: "Computer Science Engineering" },
         { code: "ECE", name: "Electronics and Communication Engineering" },
-        { code: "EEE", name: "Electrical and Electronics Engineering" },
-        { code: "MECH", name: "Mechanical Engineering" },
-        { code: "CIVIL", name: "Civil Engineering" },
         { code: "IT", name: "Information Technology" },
-        { code: "AIDS", name: "Artificial Intelligence and Data Science" },
-        { code: "AIML", name: "Artificial Intelligence and Machine Learning" }
+        { code: "CSM", name: "Computer Science and Mathematics" },
+        { code: "EEE", name: "Electrical and Electronics Engineering" }
       ];
       res.json(departments);
     } catch (error) {
@@ -760,7 +757,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const departments = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "AIDS", "AIML"];
+      const departments = ["CSE", "ECE", "IT", "CSM", "EEE"];
       const recentApplications = await storage.getRecentLeaveApplications(1000);
 
       const departmentStats = departments.map(dept => {

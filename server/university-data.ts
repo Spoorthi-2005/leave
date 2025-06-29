@@ -11,12 +11,9 @@ export async function initializeUniversityData() {
     const departments = [
       { code: "CSE", name: "Computer Science Engineering" },
       { code: "ECE", name: "Electronics and Communication Engineering" },
-      { code: "EEE", name: "Electrical and Electronics Engineering" },
-      { code: "MECH", name: "Mechanical Engineering" },
-      { code: "CIVIL", name: "Civil Engineering" },
       { code: "IT", name: "Information Technology" },
-      { code: "AIDS", name: "Artificial Intelligence and Data Science" },
-      { code: "AIML", name: "Artificial Intelligence and Machine Learning" }
+      { code: "CSM", name: "Computer Science and Mathematics" },
+      { code: "EEE", name: "Electrical and Electronics Engineering" }
     ];
 
     const years = [1, 2, 3, 4];
@@ -32,7 +29,7 @@ export async function initializeUniversityData() {
           // Create 10 students per section for demonstration
           for (let i = 1; i <= 10; i++) {
             const sectionCode = `${dept.code}${year}${section}`;
-            const studentId = `22761A${dept.code === "CSE" ? "05" : dept.code === "ECE" ? "04" : dept.code === "EEE" ? "03" : dept.code === "MECH" ? "02" : dept.code === "CIVIL" ? "01" : "06"}${String(studentIdCounter).padStart(2, '0')}`;
+            const studentId = `22761A${dept.code === "CSE" ? "05" : dept.code === "ECE" ? "04" : dept.code === "IT" ? "12" : dept.code === "CSM" ? "54" : dept.code === "EEE" ? "03" : "99"}${String(studentIdCounter).padStart(2, '0')}`;
             
             const student = await storage.createUser({
               username: `student_${sectionCode.toLowerCase()}_${i}`,

@@ -22,7 +22,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<string>("current_month");
 
-  const { data: analyticsData, isLoading } = useQuery({
+  const { data: analyticsData = {}, isLoading } = useQuery({
     queryKey: ["/api/university-analytics", selectedDepartment, timeRange],
     enabled: userRole === "admin" || userRole === "faculty",
   });
@@ -73,12 +73,9 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
                   <SelectItem value="all">All Departments</SelectItem>
                   <SelectItem value="CSE">Computer Science Engineering</SelectItem>
                   <SelectItem value="ECE">Electronics & Communication</SelectItem>
-                  <SelectItem value="EEE">Electrical & Electronics</SelectItem>
-                  <SelectItem value="MECH">Mechanical Engineering</SelectItem>
-                  <SelectItem value="CIVIL">Civil Engineering</SelectItem>
                   <SelectItem value="IT">Information Technology</SelectItem>
-                  <SelectItem value="AIDS">AI & Data Science</SelectItem>
-                  <SelectItem value="AIML">AI & Machine Learning</SelectItem>
+                  <SelectItem value="CSM">Computer Science & Mathematics</SelectItem>
+                  <SelectItem value="EEE">Electrical & Electronics</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -105,7 +102,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
-                <p className="text-3xl font-bold text-blue-600">{analyticsData?.totalStudents || 2800}</p>
+                <p className="text-3xl font-bold text-blue-600">{(analyticsData as any)?.totalStudents || 1500}</p>
                 <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                   <TrendingUp className="w-3 h-3" />
                   +5.2% from last year
