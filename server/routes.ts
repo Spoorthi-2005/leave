@@ -256,6 +256,61 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Pending Applications Route
+  app.get("/api/leave-applications/pending", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const userId = req.user!.id;
+      const role = req.user!.role;
+      const user = req.user!;
+
+      let applications = [];
+      
+      if (role === 'faculty') {
+        // Faculty members see applications based on their role
+        if (user.designation?.includes('Class Teacher')) {
+          // Class teachers see applications from their specific sections
+          applications = await storage.getLeaveApplicationsForReview(userId);
+        } else {
+          // HOD or other faculty see all pending applications
+          applications = await storage.getPendingLeaveApplications();
+        }
+      } else if (role === 'admin') {
+        // Admin sees all applications
+        applications = await storage.getPendingLeaveApplications();
+      }
+
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching pending applications:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // All Applications Route
+  app.get("/api/leave-applications/all", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const role = req.user!.role;
+      
+      if (role === 'admin') {
+        const applications = await storage.getRecentLeaveApplications(100);
+        res.json(applications);
+      } else {
+        res.status(403).json({ message: "Not authorized" });
+      }
+    } catch (error) {
+      console.error('Error fetching all applications:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Dashboard Stats Routes
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
