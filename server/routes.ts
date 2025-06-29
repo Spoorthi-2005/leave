@@ -86,10 +86,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
+
   // Leave Applications Routes
   app.post("/api/leave-applications", upload.single('attachment'), async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      console.log('Leave application submission - Auth check:', req.isAuthenticated());
+      console.log('Session:', req.session);
+      console.log('User:', req.user);
+      
+      if (!req.isAuthenticated() || !req.user) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 

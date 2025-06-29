@@ -17,22 +17,29 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  return await bcrypt.compare(supplied, stored);
+  try {
+    const result = await bcrypt.compare(supplied, stored);
+    console.log(`Password comparison: ${result ? 'SUCCESS' : 'FAILED'}`);
+    return result;
+  } catch (error) {
+    console.error('Password comparison error:', error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'gvpcew-leave-management-secure-secret-2024',
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: false,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: false,
-      sameSite: 'none',
+      httpOnly: true,
+      sameSite: 'lax',
     },
-    name: 'connect.sid',
+    name: 'gvpcew.session',
   };
 
   app.set("trust proxy", 1);
