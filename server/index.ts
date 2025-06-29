@@ -3,6 +3,7 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDemoData } from "./demo-data";
+import { initializeUniversityData } from "./university-data";
 
 const app = express();
 

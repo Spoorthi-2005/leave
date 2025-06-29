@@ -14,34 +14,87 @@ export async function initializeDemoData() {
     const hashedPassword = await bcrypt.hash("password", 10);
     console.log("Created hashed password for demo users");
 
-    // Create demo users
+    // Create Vice Principal (Admin)
     const adminUser = await storage.createUser({
       username: "admin",
-      email: "admin@gvpcew.edu.in",
+      email: "admin@gvpcew.edu.in", 
       password: hashedPassword,
       fullName: "Dr. Priya Sharma",
       role: "admin",
-      department: "Computer Science Engineering",
-      designation: "Principal",
-      employeeId: "EMP001",
+      department: "Administration",
+      designation: "Vice Principal",
+      employeeId: "VP001",
       phoneNumber: "+91-9876543210",
-      address: "GVPCEW Campus, Bhimavaram"
+      address: "GVPCEW Campus, Madhurawada, Visakhapatnam"
     });
 
-    const facultyUser = await storage.createUser({
-      username: "faculty1",
-      email: "faculty1@gvpcew.edu.in",
+    // Create HODs for all departments
+    const cseHod = await storage.createUser({
+      username: "cse_hod",
+      email: "cse.hod@gvpcew.edu.in",
       password: hashedPassword,
-      fullName: "Prof. Lakshmi Devi",
+      fullName: "Dr. Rajesh Kumar",
       role: "faculty",
       department: "Computer Science Engineering",
-      designation: "Associate Professor",
-      employeeId: "EMP002",
+      designation: "HOD - CSE",
+      employeeId: "HOD001",
       phoneNumber: "+91-9876543211",
       address: "Faculty Quarters, GVPCEW"
     });
 
-    // Create GVPCEW Class Teachers
+    const eceHod = await storage.createUser({
+      username: "ece_hod",
+      email: "ece.hod@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Meera Rao",
+      role: "faculty",
+      department: "Electronics and Communication Engineering",
+      designation: "HOD - ECE",
+      employeeId: "HOD002",
+      phoneNumber: "+91-9876543212",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    const eeeHod = await storage.createUser({
+      username: "eee_hod",
+      email: "eee.hod@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Sita Devi",
+      role: "faculty",
+      department: "Electrical and Electronics Engineering",
+      designation: "HOD - EEE",
+      employeeId: "HOD003",
+      phoneNumber: "+91-9876543213",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    const mechHod = await storage.createUser({
+      username: "mech_hod",
+      email: "mech.hod@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Rama Krishna",
+      role: "faculty",
+      department: "Mechanical Engineering",
+      designation: "HOD - MECH",
+      employeeId: "HOD004",
+      phoneNumber: "+91-9876543214",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    const civilHod = await storage.createUser({
+      username: "civil_hod",
+      email: "civil.hod@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Lakshmi Prasad",
+      role: "faculty",
+      department: "Civil Engineering",
+      designation: "HOD - CIVIL",
+      employeeId: "HOD005",
+      phoneNumber: "+91-9876543215",
+      address: "Faculty Quarters, GVPCEW"
+    });
+
+    // Create CSE Class Teachers for all years and sections
     const gowthami = await storage.createUser({
       username: "gowthami",
       email: "gowthami@gvpcew.edu.in",
@@ -129,7 +182,11 @@ export async function initializeDemoData() {
 
     // Create leave balances for all users
     await storage.createLeaveBalance(adminUser.id, new Date().getFullYear());
-    await storage.createLeaveBalance(facultyUser.id, new Date().getFullYear());
+    await storage.createLeaveBalance(cseHod.id, new Date().getFullYear());
+    await storage.createLeaveBalance(eceHod.id, new Date().getFullYear());
+    await storage.createLeaveBalance(eeeHod.id, new Date().getFullYear());
+    await storage.createLeaveBalance(mechHod.id, new Date().getFullYear());
+    await storage.createLeaveBalance(civilHod.id, new Date().getFullYear());
     await storage.createLeaveBalance(gowthami.id, new Date().getFullYear());
     await storage.createLeaveBalance(ySowmya.id, new Date().getFullYear());
     await storage.createLeaveBalance(mPavani.id, new Date().getFullYear());
@@ -156,7 +213,7 @@ export async function initializeDemoData() {
     const toDate2 = new Date(Date.now() + 518400000); // 6 days from now
     const leaveDays2 = Math.ceil((toDate2.getTime() - fromDate2.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    const facultyLeaveApp = await storage.createLeaveApplication(facultyUser.id, {
+    const facultyLeaveApp = await storage.createLeaveApplication(gowthami.id, {
       leaveType: "personal",
       fromDate: fromDate2,
       toDate: toDate2,
