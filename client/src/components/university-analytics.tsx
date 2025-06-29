@@ -118,10 +118,10 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Faculty Members</p>
-                <p className="text-3xl font-bold text-green-600">{analyticsData?.totalFaculty || 180}</p>
+                <p className="text-3xl font-bold text-green-600">{(analyticsData as any)?.totalFaculty || 75}</p>
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
                   <Users className="w-3 h-3" />
-                  Across 8 departments
+                  Across 5 departments
                 </p>
               </div>
               <Users className="w-8 h-8 text-green-500" />
@@ -134,7 +134,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Applications</p>
-                <p className="text-3xl font-bold text-orange-600">{analyticsData?.pendingApplications || 23}</p>
+                <p className="text-3xl font-bold text-orange-600">{(analyticsData as any)?.pendingApplications || 15}</p>
                 <p className="text-xs text-orange-600 flex items-center gap-1 mt-1">
                   <Clock className="w-3 h-3" />
                   Requires attention
@@ -150,7 +150,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Approval Rate</p>
-                <p className="text-3xl font-bold text-purple-600">{analyticsData?.approvalRate || 89}%</p>
+                <p className="text-3xl font-bold text-purple-600">{(analyticsData as any)?.approvalRate || 89}%</p>
                 <p className="text-xs text-purple-600 flex items-center gap-1 mt-1">
                   <CheckCircle className="w-3 h-3" />
                   This month
@@ -173,7 +173,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={departmentStats}>
+              <BarChart data={departmentStats as any[]}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="department" />
                 <YAxis />
@@ -198,7 +198,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={analyticsData?.leaveTypeDistribution || [
+                  data={(analyticsData as any)?.leaveTypeDistribution || [
                     { name: 'Sick Leave', value: 35, color: '#EF4444' },
                     { name: 'Casual Leave', value: 28, color: '#3B82F6' },
                     { name: 'Personal Leave', value: 22, color: '#8B5CF6' },
@@ -211,7 +211,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`}
                 >
-                  {(analyticsData?.leaveTypeDistribution || []).map((entry: any, index: number) => (
+                  {((analyticsData as any)?.leaveTypeDistribution || []).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -233,7 +233,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(yearWiseData || [
+              {((yearWiseData as any[]) || [
                 { year: "1st Year", total: 45, approved: 38, pending: 4, rejected: 3 },
                 { year: "2nd Year", total: 52, approved: 44, pending: 5, rejected: 3 },
                 { year: "3rd Year", total: 67, approved: 58, pending: 6, rejected: 3 },
@@ -275,7 +275,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={attendanceTrends || [
+              <LineChart data={(attendanceTrends as any[]) || [
                 { month: 'Jan', applications: 65, approval_rate: 85 },
                 { month: 'Feb', applications: 59, approval_rate: 88 },
                 { month: 'Mar', applications: 80, approval_rate: 82 },
@@ -332,7 +332,7 @@ export function UniversityAnalytics({ userRole, department }: UniversityAnalytic
                 <span className="font-medium text-orange-700">Pending Review</span>
               </div>
               <p className="text-sm text-orange-600">
-                {analyticsData?.pendingApplications || 23} applications pending. Average review time: 2.3 days.
+                {(analyticsData as any)?.pendingApplications || 15} applications pending. Average review time: 2.3 days.
               </p>
             </div>
           </div>
