@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { DEPARTMENT_SUBJECTS } from "../shared/subjects";
 
 export async function initializeUniversityData() {
   try {

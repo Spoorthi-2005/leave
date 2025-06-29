@@ -80,6 +80,13 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
   * Each department has 3 sections (A, B, C) for all 4 years (1st, 2nd, 3rd, 4th)
   * Updated student ID generation and faculty assignments to match structure
   * Class teacher assignments per section with proper routing workflow
+- **Advanced Substitute Teacher Assignment System (Jan 29, 2025)**:
+  * Intelligent automatic assignment when faculty take leave
+  * Subject-based matching with qualified substitute teachers
+  * Real-time WhatsApp and email notifications to all stakeholders
+  * Student notifications about substitute teacher assignments
+  * HOD alerts for department faculty coverage
+  * Complete academic continuity management with zero class disruption
 
 ## Technical Decisions
 - Using Drizzle ORM for type-safe database operations
