@@ -16,32 +16,62 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  try {
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-    };
-    
-    if (data) {
-      headers['Content-Type'] = 'application/json';
-    }
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: data ? JSON.stringify(data) : undefined,
-      credentials: "include",
-      mode: "cors",
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      };
+      
+      if (data) {
+        headers['Content-Type'] = 'application/json';
+      }
 
-    await throwIfResNotOk(res);
-    return res;
-  } catch (error) {
-    if (error instanceof DOMException || error instanceof TypeError) {
-      console.error("Network error:", error);
-      throw new Error("Connection failed - please try again");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: data ? JSON.stringify(data) : undefined,
+        credentials: "include",
+        mode: "cors",
+        signal: controller.signal,
+        cache: 'no-cache',
+      });
+
+      clearTimeout(timeoutId);
+      await throwIfResNotOk(res);
+      return res;
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (error instanceof DOMException || 
+          error instanceof TypeError ||
+          (error as Error).name === 'AbortError' ||
+          (error as Error).message.includes('fetch')) {
+        
+        console.warn(`Network attempt ${attempt}/${maxRetries} failed:`, error);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff with jitter
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 1000, 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        throw new Error("Connection failed after multiple attempts - please refresh the page");
+      }
+      
+      throw error;
     }
-    throw error;
   }
+
+  throw lastError || new Error("Unknown network error");
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -75,21 +105,32 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 30 * 1000, // 30 seconds for better real-time updates
       retry: (failureCount, error) => {
-        if (error instanceof Error && error.message.includes("Network connection failed")) {
-          return failureCount < 2;
+        // Enhanced retry logic for DOMException errors
+        if (error instanceof Error) {
+          if (error.message.includes("Network connection failed") || 
+              error.message.includes("fetch") ||
+              error.name === "DOMException") {
+            return failureCount < 3;
+          }
         }
         return false;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     },
     mutations: {
       retry: (failureCount, error) => {
-        if (error instanceof Error && error.message.includes("Network connection failed")) {
-          return failureCount < 1;
+        if (error instanceof Error) {
+          if (error.message.includes("Network connection failed") ||
+              error.message.includes("fetch") ||
+              error.name === "DOMException") {
+            return failureCount < 2;
+          }
         }
         return false;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
     },
   },
 });

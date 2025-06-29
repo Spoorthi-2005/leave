@@ -12,6 +12,7 @@ import FacultyDashboard from "@/pages/faculty-dashboard";
 import EnhancedAdminDashboard from "@/pages/enhanced-admin-dashboard";
 import { NotificationSystem } from "@/components/notification-system";
 import { useWebSocket } from "@/hooks/use-websocket";
+import ErrorBoundary from "./components/error-boundary";
 
 function Router() {
   return (
@@ -54,13 +55,15 @@ function AppContent() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
