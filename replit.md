@@ -69,12 +69,17 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
   * Comments field required for all review decisions to ensure proper feedback
 - **University-Wide Expansion (Jan 29, 2025)**:
   * Extended system to support all university students across 1st, 2nd, 3rd, and 4th years
-  * Added support for all 8 departments: CSE, ECE, EEE, MECH, CIVIL, IT, AIDS, AIML
+  * Added support for exact 5 departments: CSE, ECE, IT, CSM, EEE (3 sections per year each)
   * Created comprehensive faculty hierarchy with HODs for each department
   * Implemented advanced analytics dashboard showing department-wise statistics and trends
   * Enhanced WhatsApp integration with bulk messaging for holiday announcements and reminders
   * Added university-wide calendar view with multi-department leave tracking
   * Integrated advanced notification system with both email and WhatsApp delivery
+- **Department Structure Update (Jan 29, 2025)**:
+  * Configured exact university structure: CSE, ECE, IT, CSM, EEE departments
+  * Each department has 3 sections (A, B, C) for all 4 years (1st, 2nd, 3rd, 4th)
+  * Updated student ID generation and faculty assignments to match structure
+  * Class teacher assignments per section with proper routing workflow
 
 ## Technical Decisions
 - Using Drizzle ORM for type-safe database operations

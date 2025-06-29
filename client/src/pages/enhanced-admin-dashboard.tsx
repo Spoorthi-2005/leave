@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedDashboardLayout } from "@/components/enhanced-dashboard-layout";
 import { LeaveDetailsModal } from "@/components/leave-details-modal";
-import { AnalyticsDashboard } from "@/components/analytics-dashboard";
-import { LeaveCalendar } from "@/components/leave-calendar";
+import { UniversityAnalytics } from "@/components/university-analytics";
+import { AdvancedLeaveCalendar } from "@/components/advanced-leave-calendar";
 import { useAuth } from "@/hooks/use-auth";
 
 interface LeaveApplication {
@@ -303,19 +303,12 @@ export default function EnhancedAdminDashboard() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics">
-            <AnalyticsDashboard userRole="admin" />
+            <UniversityAnalytics userRole="admin" />
           </TabsContent>
 
           {/* Calendar Tab */}
           <TabsContent value="calendar">
-            <Card className="luxury-card">
-              <CardHeader>
-                <CardTitle>Leave Calendar - All Departments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <LeaveCalendar showAllUsers={true} />
-              </CardContent>
-            </Card>
+            <AdvancedLeaveCalendar userRole="admin" />
           </TabsContent>
         </Tabs>
 

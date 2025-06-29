@@ -32,7 +32,7 @@ export function AdvancedLeaveCalendar({ userRole = "student", department }: Adva
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const getDayLeaves = (date: Date) => {
-    return calendarData.filter((leave: any) => {
+    return (calendarData as any[]).filter((leave: any) => {
       const fromDate = new Date(leave.fromDate);
       const toDate = new Date(leave.toDate);
       return date >= fromDate && date <= toDate;
@@ -99,7 +99,7 @@ export function AdvancedLeaveCalendar({ userRole = "student", department }: Adva
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((dept: any) => (
+                  {(departments as any[]).map((dept: any) => (
                     <SelectItem key={dept.code} value={dept.code}>
                       {dept.name}
                     </SelectItem>
@@ -205,25 +205,25 @@ export function AdvancedLeaveCalendar({ userRole = "student", department }: Adva
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
               <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {calendarData.filter((l: any) => l.status === 'pending').length}
+                  {(calendarData as any[]).filter((l: any) => l.status === 'pending').length}
                 </div>
                 <div className="text-sm text-blue-700 dark:text-blue-400">Pending</div>
               </div>
               <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {calendarData.filter((l: any) => l.status === 'approved').length}
+                  {(calendarData as any[]).filter((l: any) => l.status === 'approved').length}
                 </div>
                 <div className="text-sm text-green-700 dark:text-green-400">Approved</div>
               </div>
               <div className="text-center p-3 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg">
                 <div className="text-2xl font-bold text-red-600">
-                  {calendarData.filter((l: any) => l.status === 'rejected').length}
+                  {(calendarData as any[]).filter((l: any) => l.status === 'rejected').length}
                 </div>
                 <div className="text-sm text-red-700 dark:text-red-400">Rejected</div>
               </div>
               <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {new Set(calendarData.map((l: any) => l.userId)).size}
+                  {new Set((calendarData as any[]).map((l: any) => l.userId)).size}
                 </div>
                 <div className="text-sm text-purple-700 dark:text-purple-400">
                   {viewType === "personal" ? "My Applications" : "Applicants"}
