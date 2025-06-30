@@ -258,35 +258,37 @@ export class DatabaseStorage implements IStorage {
     const faculty = await this.getUser(facultyId);
     if (!faculty) return [];
 
-    // Class teachers see applications from their specific sections
-    // HOD sees all pending applications that need HOD approval
+    console.log(`Faculty ${faculty.fullName} (${faculty.username}) requesting applications for review`);
+    console.log(`Faculty designation: ${faculty.designation}`);
+
+    // Section-specific routing for class teachers
     let whereConditions;
     
-    if (faculty.designation?.includes('Class Teacher')) {
-      // Extract section from designation (e.g., "Class Teacher - CSE1" -> "CSE1")
-      const sectionMatch = faculty.designation.match(/CSE\d+/);
-      const section = sectionMatch ? sectionMatch[0] : null;
-      
-      if (section) {
-        whereConditions = and(
-          eq(leaveApplications.status, 'pending'),
-          eq(users.role, 'student'),
-          eq(users.section, section)
-        );
-      } else {
-        whereConditions = and(
-          eq(leaveApplications.status, 'pending'),
-          eq(users.role, 'student')
-        );
-      }
+    // Map faculty usernames to their sections
+    const facultySectionMap: { [key: string]: string } = {
+      'gowthami': 'CSE1',
+      'ysowmya': 'CSE2', 
+      'mpavani': 'CSE3'
+    };
+
+    const assignedSection = facultySectionMap[faculty.username];
+    
+    if (assignedSection) {
+      // Class teacher sees only their section's pending applications
+      console.log(`Class teacher ${faculty.fullName} assigned to section ${assignedSection}`);
+      whereConditions = and(
+        eq(leaveApplications.status, 'pending'),
+        eq(users.role, 'student'),
+        eq(users.section, assignedSection)
+      );
     } else if (faculty.role === 'admin' || faculty.designation?.includes('HOD')) {
-      // HOD/Admin sees all pending applications or those needing HOD approval
+      // HOD/Admin sees all pending applications
       whereConditions = and(
         eq(leaveApplications.status, 'pending'),
         eq(users.role, 'student')
       );
     } else {
-      // Regular faculty see all pending applications
+      // Regular faculty see all pending applications (fallback)
       whereConditions = and(
         eq(leaveApplications.status, 'pending'),
         eq(users.role, 'student')
@@ -322,6 +324,11 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(users, eq(leaveApplications.userId, users.id))
     .where(whereConditions)
     .orderBy(desc(leaveApplications.appliedAt));
+    
+    console.log(`Found ${results.length} applications for faculty ${faculty.fullName}`);
+    if (results.length > 0) {
+      console.log('Sample application:', results[0]);
+    }
     
     return results as any[];
   }
