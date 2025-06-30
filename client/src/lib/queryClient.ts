@@ -102,35 +102,13 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
+      queryFn: getQueryFn({ on401: "returnNull" }),
+      retry: false,
       refetchOnWindowFocus: false,
-      staleTime: 30 * 1000, // 30 seconds for better real-time updates
-      retry: (failureCount, error) => {
-        // Enhanced retry logic for DOMException errors
-        if (error instanceof Error) {
-          if (error.message.includes("Network connection failed") || 
-              error.message.includes("fetch") ||
-              error.name === "DOMException") {
-            return failureCount < 3;
-          }
-        }
-        return false;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+      staleTime: 0,
     },
     mutations: {
-      retry: (failureCount, error) => {
-        if (error instanceof Error) {
-          if (error.message.includes("Network connection failed") ||
-              error.message.includes("fetch") ||
-              error.name === "DOMException") {
-            return failureCount < 2;
-          }
-        }
-        return false;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
+      retry: false,
     },
   },
 });
