@@ -207,6 +207,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Pending leave applications route (must come before parameterized route)
+  app.get("/api/leave-applications/pending", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const userId = req.user!.id;
+      const role = req.user!.role;
+
+      let applications;
+      if (role === 'faculty') {
+        applications = await storage.getLeaveApplicationsForReview(userId);
+      } else if (role === 'admin') {
+        applications = await storage.getPendingLeaveApplications();
+      } else {
+        applications = [];
+      }
+
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching pending leave applications:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/leave-applications", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -241,6 +267,10 @@ export function registerRoutes(app: Express): Server {
       }
 
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid application ID" });
+      }
+      
       const application = await storage.getLeaveApplicationById(id);
 
       if (!application) {
@@ -274,8 +304,16 @@ export function registerRoutes(app: Express): Server {
       }
 
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid application ID" });
+      }
+
       const { status, comments } = req.body;
       const reviewerId = req.user!.id;
+
+      if (!comments || comments.trim() === '') {
+        return res.status(400).json({ message: "Comments are required for review" });
+      }
 
       if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
