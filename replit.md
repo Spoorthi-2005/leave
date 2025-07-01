@@ -32,6 +32,12 @@ A comprehensive leave management system for Gayatri Vidya Parishad College of En
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
+- **Student Registration System Added (Jul 1, 2025)**:
+  * Complete registration form with student details (department, year, semester, section)
+  * Automatic section-specific routing for new registered students
+  * Enhanced department selection with proper GVPCEW options (CSE, ECE, IT, CSM, EEE)
+  * Tested end-to-end: New student registration → Leave application → Class teacher approval → WhatsApp notification
+  * Verified with Neha Singh (CSE2) → Y Sowmya approval → WhatsApp: +91-9988776655
 - **University-Scale Leave Management System Fully Operational (Jan 30, 2025)**:
   * Created comprehensive database with 164+ students across all 5 departments
   * Verified scalable system supports 600+ students with section-specific routing
