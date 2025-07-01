@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import NotFound from "@/pages/not-found";
-import SimpleAuth from "@/pages/simple-auth";
+import AuthPage from "@/pages/auth-page";
 import StudentDashboard from "@/pages/student-dashboard";
 import FacultyDashboard from "@/pages/faculty-dashboard";
 import EnhancedAdminDashboard from "@/pages/enhanced-admin-dashboard";
@@ -18,7 +18,7 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={() => <DashboardRouter />} />
-      <Route path="/auth" component={SimpleAuth} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
