@@ -57,6 +57,7 @@ export default function AuthPage() {
       department: "",
       year: undefined,
       semester: undefined,
+      section: "",
       designation: "",
       phoneNumber: "",
     },
@@ -254,45 +255,102 @@ export default function AuthPage() {
                     </div>
 
                     {registerForm.watch("role") === "student" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="register-studentId">Student ID</Label>
-                          <Input
-                            id="register-studentId"
-                            {...registerForm.register("studentId")}
-                            placeholder="Student ID"
-                            className="mt-1"
-                          />
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="register-studentId">Student ID</Label>
+                            <Input
+                              id="register-studentId"
+                              {...registerForm.register("studentId")}
+                              placeholder="e.g., 21CSE1001"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="register-year">Year</Label>
+                            <Select
+                              value={registerForm.watch("year")?.toString()}
+                              onValueChange={(value) => registerForm.setValue("year", parseInt(value))}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select year" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1st Year</SelectItem>
+                                <SelectItem value="2">2nd Year</SelectItem>
+                                <SelectItem value="3">3rd Year</SelectItem>
+                                <SelectItem value="4">4th Year</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="register-year">Year</Label>
-                          <Input
-                            id="register-year"
-                            type="number"
-                            {...registerForm.register("year", { valueAsNumber: true })}
-                            placeholder="Year"
-                            className="mt-1"
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="register-semester">Semester</Label>
+                            <Select
+                              value={registerForm.watch("semester")?.toString()}
+                              onValueChange={(value) => registerForm.setValue("semester", parseInt(value))}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select semester" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1st Semester</SelectItem>
+                                <SelectItem value="2">2nd Semester</SelectItem>
+                                <SelectItem value="3">3rd Semester</SelectItem>
+                                <SelectItem value="4">4th Semester</SelectItem>
+                                <SelectItem value="5">5th Semester</SelectItem>
+                                <SelectItem value="6">6th Semester</SelectItem>
+                                <SelectItem value="7">7th Semester</SelectItem>
+                                <SelectItem value="8">8th Semester</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="register-section">Section</Label>
+                            <Select
+                              value={registerForm.watch("section") || ""}
+                              onValueChange={(value) => registerForm.setValue("section", value)}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="A">Section A</SelectItem>
+                                <SelectItem value="B">Section B</SelectItem>
+                                <SelectItem value="C">Section C</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="register-department">Department</Label>
-                        <Input
-                          id="register-department"
-                          {...registerForm.register("department")}
-                          placeholder="Department"
-                          className="mt-1"
-                        />
+                        <Select
+                          value={registerForm.watch("department") || ""}
+                          onValueChange={(value) => registerForm.setValue("department", value)}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Computer Science Engineering">Computer Science Engineering (CSE)</SelectItem>
+                            <SelectItem value="Electronics and Communication Engineering">Electronics and Communication Engineering (ECE)</SelectItem>
+                            <SelectItem value="Information Technology">Information Technology (IT)</SelectItem>
+                            <SelectItem value="Computer Science and Mathematics">Computer Science and Mathematics (CSM)</SelectItem>
+                            <SelectItem value="Electrical and Electronics Engineering">Electrical and Electronics Engineering (EEE)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label htmlFor="register-phoneNumber">Phone Number</Label>
                         <Input
                           id="register-phoneNumber"
                           {...registerForm.register("phoneNumber")}
-                          placeholder="Phone number"
+                          placeholder="+91-9876543210"
                           className="mt-1"
                         />
                       </div>
