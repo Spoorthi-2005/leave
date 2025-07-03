@@ -12,7 +12,7 @@ interface SimpleUser {
   username: string;
   email: string;
   fullName: string;
-  role: "student" | "teacher" | "admin";
+  role: "student" | "teacher" | "admin" | "hod";
   department?: string;
   phoneNumber?: string;
 }
@@ -27,7 +27,7 @@ interface RegisterData {
   email: string;
   password: string;
   fullName: string;
-  role: "student" | "teacher" | "admin";
+  role: "student" | "teacher" | "admin" | "hod";
   department?: string;
   phoneNumber?: string;
 }

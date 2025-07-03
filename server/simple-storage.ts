@@ -9,7 +9,7 @@ export interface User {
   email: string;
   password: string;
   fullName: string;
-  role: "student" | "teacher" | "admin";
+  role: "student" | "teacher" | "admin" | "hod";
   department?: string;
   phoneNumber?: string;
   isActive: boolean;
@@ -24,7 +24,7 @@ export interface LeaveApplication {
   startDate: Date;
   endDate: Date;
   reason: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "forwarded_to_admin";
   reviewedBy?: number;
   reviewedAt?: Date;
   comments?: string;
@@ -54,10 +54,11 @@ export interface IStorage {
   
   // Leave Applications
   createLeaveApplication(application: Omit<LeaveApplication, 'id' | 'createdAt' | 'updatedAt'>): Promise<LeaveApplication>;
+  getLeaveApplicationById(id: number): Promise<LeaveApplication | undefined>;
   getUserLeaveApplications(userId: number): Promise<LeaveApplication[]>;
   getPendingLeaveApplications(): Promise<LeaveApplication[]>;
   getAllLeaveApplications(): Promise<LeaveApplication[]>;
-  updateLeaveApplication(id: number, status: "approved" | "rejected", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
+  updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
   
   // Leave Balance
   getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;
@@ -178,7 +179,11 @@ export class MemoryStorage implements IStorage {
     }));
   }
 
-  async updateLeaveApplication(id: number, status: "approved" | "rejected", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
+  async getLeaveApplicationById(id: number): Promise<LeaveApplication | undefined> {
+    return this.leaveApplications.find(app => app.id === id);
+  }
+
+  async updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
     const appIndex = this.leaveApplications.findIndex(app => app.id === id);
     if (appIndex === -1) return undefined;
 

@@ -9,16 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, FileText, Clock, CheckCircle, XCircle, LogOut, Eye, Shield, AlertTriangle } from "lucide-react";
+import { Users, FileText, Clock, CheckCircle, XCircle, LogOut, Eye, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 
-export default function AdminDashboard() {
+export default function HODDashboard() {
   const { user, logoutMutation } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [reviewComments, setReviewComments] = useState("");
 
-  const { data: adminApplications = [] } = useQuery({
-    queryKey: ["/api/leave-applications/admin-review"],
+  const { data: pendingFacultyApplications = [] } = useQuery({
+    queryKey: ["/api/leave-applications/pending-faculty"],
   });
 
   const { data: allApplications = [] } = useQuery({
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/admin-review"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/pending-faculty"] });
       queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/all"] });
       setSelectedApplication(null);
       setReviewComments("");
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
       case "rejected":
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
       case "forwarded_to_admin":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Admin Review Required</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Forwarded to Admin</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -73,16 +73,16 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Shield className="h-8 w-8 text-purple-600" />
+                <BookOpen className="h-8 w-8 text-indigo-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">HOD Dashboard</h1>
                   <p className="text-sm text-gray-500">Gayatri Vidya Parishad College of Engineering for Women</p>
                 </div>
               </div>
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                <p className="text-xs text-gray-500">System Administrator</p>
+                <p className="text-xs text-gray-500">{user?.department} Department • HOD</p>
               </div>
               <Button
                 variant="outline"
@@ -121,10 +121,10 @@ export default function AdminDashboard() {
           
           <Card>
             <CardContent className="flex items-center p-6">
-              <AlertTriangle className="h-8 w-8 text-orange-600 mr-4" />
+              <Clock className="h-8 w-8 text-yellow-600 mr-4" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{adminApplications.length}</p>
-                <p className="text-sm text-gray-500">Admin Review Required</p>
+                <p className="text-2xl font-bold text-gray-900">{pendingFacultyApplications.length}</p>
+                <p className="text-sm text-gray-500">Pending Faculty Reviews</p>
               </div>
             </CardContent>
           </Card>
@@ -155,30 +155,27 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="admin-review" className="space-y-6">
+        <Tabs defaultValue="pending" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="admin-review">Admin Review Required ({adminApplications.length})</TabsTrigger>
+            <TabsTrigger value="pending">Pending Faculty Reviews ({pendingFacultyApplications.length})</TabsTrigger>
             <TabsTrigger value="all">All Applications ({allApplications.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="admin-review" className="space-y-6">
+          <TabsContent value="pending" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <span>Long-Duration Faculty Leaves Requiring Admin Approval</span>
-                </CardTitle>
+                <CardTitle>Faculty Leave Applications Requiring Review</CardTitle>
               </CardHeader>
               <CardContent>
-                {adminApplications.length === 0 ? (
+                {pendingFacultyApplications.length === 0 ? (
                   <div className="text-center py-8">
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No applications requiring admin review</p>
+                    <p className="text-gray-500">No faculty applications pending review</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {adminApplications.map((application: any) => (
-                      <div key={application.id} className="border rounded-lg p-4 hover:bg-gray-50 border-orange-200 bg-orange-50">
+                    {pendingFacultyApplications.map((application: any) => (
+                      <div key={application.id} className="border rounded-lg p-4 hover:bg-gray-50">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-4">
@@ -186,7 +183,7 @@ export default function AdminDashboard() {
                                 <h3 className="font-medium text-gray-900">{application.studentName}</h3>
                                 <p className="text-sm text-gray-500">
                                   {format(new Date(application.startDate), "MMM dd, yyyy")} - {format(new Date(application.endDate), "MMM dd, yyyy")}
-                                  <span className="ml-2 text-orange-600 font-semibold">({calculateLeaveDays(application.startDate, application.endDate)} days - Long Duration)</span>
+                                  <span className="ml-2 text-blue-600">({calculateLeaveDays(application.startDate, application.endDate)} days)</span>
                                 </p>
                               </div>
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -203,7 +200,6 @@ export default function AdminDashboard() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setSelectedApplication(application)}
-                                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
                                 >
                                   <Eye className="h-4 w-4 mr-1" />
                                   Review
@@ -211,22 +207,10 @@ export default function AdminDashboard() {
                               </DialogTrigger>
                               <DialogContent className="max-w-md">
                                 <DialogHeader>
-                                  <DialogTitle>Admin Review - Long Duration Leave</DialogTitle>
+                                  <DialogTitle>Review Faculty Leave Application</DialogTitle>
                                 </DialogHeader>
                                 {selectedApplication && (
                                   <div className="space-y-4">
-                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                      <div className="flex items-center space-x-2">
-                                        <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                        <p className="text-sm font-medium text-orange-800">
-                                          Long Duration Leave ({calculateLeaveDays(selectedApplication.startDate, selectedApplication.endDate)} days)
-                                        </p>
-                                      </div>
-                                      <p className="text-xs text-orange-700 mt-1">
-                                        Faculty leaves over 7 days require admin approval
-                                      </p>
-                                    </div>
-                                    
                                     <div className="space-y-2">
                                       <p><strong>Faculty:</strong> {selectedApplication.studentName}</p>
                                       <p><strong>Type:</strong> {selectedApplication.type}</p>
@@ -236,10 +220,10 @@ export default function AdminDashboard() {
                                     </div>
                                     
                                     <div className="space-y-2">
-                                      <Label htmlFor="comments">Admin Decision Comments *</Label>
+                                      <Label htmlFor="comments">Review Comments *</Label>
                                       <Textarea
                                         id="comments"
-                                        placeholder="Enter your admin decision and comments..."
+                                        placeholder="Enter your review comments..."
                                         value={reviewComments}
                                         onChange={(e) => setReviewComments(e.target.value)}
                                         rows={3}
@@ -282,7 +266,7 @@ export default function AdminDashboard() {
           <TabsContent value="all" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>All Leave Applications - System Overview</CardTitle>
+                <CardTitle>All Leave Applications</CardTitle>
               </CardHeader>
               <CardContent>
                 {allApplications.length === 0 ? (

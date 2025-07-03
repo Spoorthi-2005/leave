@@ -12,7 +12,7 @@ const leaveApplicationSchema = z.object({
 });
 
 const reviewSchema = z.object({
-  status: z.enum(["approved", "rejected"]),
+  status: z.enum(["approved", "rejected", "forwarded_to_admin"]),
   comments: z.string().min(1),
 });
 
@@ -22,10 +22,10 @@ export function registerRoutes(app: Express): Server {
 
   // Leave Applications Routes
   
-  // Student: Create leave application
+  // Student/Faculty: Create leave application
   app.post("/api/leave-applications", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user?.role !== "student") {
+      if (!req.isAuthenticated() || !["student", "teacher", "hod"].includes(req.user?.role)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -36,13 +36,24 @@ export function registerRoutes(app: Express): Server {
 
       const { type, startDate, endDate, reason } = validation.data;
 
+      // Calculate leave duration
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Determine status based on role and duration
+      let status: "pending" | "approved" | "rejected" | "forwarded_to_admin" = "pending";
+      if (req.user.role === "teacher" && leaveDays > 7) {
+        status = "forwarded_to_admin";
+      }
+
       const application = await storage.createLeaveApplication({
         userId: req.user.id,
         type,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         reason,
-        status: "pending",
+        status,
       });
 
       res.status(201).json(application);
@@ -52,10 +63,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Student: Get own applications
+  // Student/Faculty: Get own applications
   app.get("/api/leave-applications", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user?.role !== "student") {
+      if (!req.isAuthenticated() || !["student", "teacher", "hod"].includes(req.user?.role)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -88,7 +99,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Teacher: Get pending applications
+  // Teacher: Get pending applications (student applications only)
   app.get("/api/leave-applications/pending", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user?.role !== "teacher") {
@@ -96,9 +107,53 @@ export function registerRoutes(app: Express): Server {
       }
 
       const applications = await storage.getPendingLeaveApplications();
-      res.json(applications);
+      // Filter only student applications for teachers
+      const studentApplications = applications.filter(app => {
+        // Get user role by checking if they are students
+        return app.userId !== req.user.id; // Exclude teacher's own applications
+      });
+      res.json(studentApplications);
     } catch (error) {
       console.error("Error fetching pending applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // HOD: Get pending faculty applications
+  app.get("/api/leave-applications/pending-faculty", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "hod") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getPendingLeaveApplications();
+      // Filter only faculty applications for HOD
+      const facultyApplications = applications.filter(app => {
+        // Get applications from teachers in the same department
+        return app.status === "pending" && app.userId !== req.user.id;
+      });
+      res.json(facultyApplications);
+    } catch (error) {
+      console.error("Error fetching pending faculty applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get long-duration faculty applications
+  app.get("/api/leave-applications/admin-review", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "admin") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getAllLeaveApplications();
+      // Filter applications forwarded to admin
+      const adminApplications = applications.filter(app => 
+        app.status === "forwarded_to_admin"
+      );
+      res.json(adminApplications);
+    } catch (error) {
+      console.error("Error fetching admin applications:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -118,10 +173,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Teacher: Review application
+  // Teacher/HOD/Admin: Review application
   app.patch("/api/leave-applications/:id/review", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+      if (!req.isAuthenticated() || !["teacher", "hod", "admin"].includes(req.user?.role)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -134,9 +189,30 @@ export function registerRoutes(app: Express): Server {
 
       const { status, comments } = validation.data;
 
+      // Get the application to check details
+      const application = await storage.getLeaveApplicationById(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Calculate leave duration for workflow decisions
+      const start = new Date(application.startDate);
+      const end = new Date(application.endDate);
+      const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      let finalStatus = status;
+
+      // Handle teacher approvals for faculty leave
+      if (req.user.role === "teacher" && status === "approved") {
+        // If it's a faculty member's leave > 7 days, forward to admin
+        if (leaveDays > 7) {
+          finalStatus = "forwarded_to_admin";
+        }
+      }
+
       const updatedApplication = await storage.updateLeaveApplication(
         applicationId,
-        status,
+        finalStatus,
         req.user.id,
         comments
       );
