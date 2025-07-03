@@ -46,10 +46,12 @@ A complete leave management system for educational institutions supporting both 
   * Mock service currently logs to console - easily replaceable with real WhatsApp Web API or Twilio
   * Successfully tested: Student submits leave → HOD approves/rejects → WhatsApp notification sent
   * Notifications include approval ✅ and rejection ❌ indicators with personalized messages
-- **Department Order Updated & Complete System Verified (Jul 3, 2025)**:
-  * Updated departments to exact order: CSE, IT, ECE, EEE, CSM as requested
+- **Department Dropdown Fixed & System Updated (Jul 3, 2025)**:
+  * Fixed department selection in all registration forms to show: CSE, IT, ECE, EEE, CSM
+  * Updated both auth.tsx and enhanced-auth-page.tsx to replace old academic departments
+  * Removed outdated options: Computer Science, Mathematics, Physics, Chemistry, Biology
+  * All registration forms now consistently show engineering departments in correct order
   * Created comprehensive demo data with HODs, faculty, and students for all 5 departments
-  * Updated registration form to display departments in the specified order
   * Successfully tested complete workflow across all departments
   * Verified leave routing: short leaves to faculty, long leaves (>5 days) to HOD
   * Professional WhatsApp notifications working with GVPCEW branding for all departments

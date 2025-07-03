@@ -237,11 +237,11 @@ export default function AuthPage() {
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Computer Science">Computer Science</SelectItem>
-                            <SelectItem value="Mathematics">Mathematics</SelectItem>
-                            <SelectItem value="Physics">Physics</SelectItem>
-                            <SelectItem value="Chemistry">Chemistry</SelectItem>
-                            <SelectItem value="Biology">Biology</SelectItem>
+                            <SelectItem value="CSE">Computer Science Engineering (CSE)</SelectItem>
+                            <SelectItem value="IT">Information Technology (IT)</SelectItem>
+                            <SelectItem value="ECE">Electronics and Communication Engineering (ECE)</SelectItem>
+                            <SelectItem value="EEE">Electrical and Electronics Engineering (EEE)</SelectItem>
+                            <SelectItem value="CSM">Computer Science and Mathematics (CSM)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

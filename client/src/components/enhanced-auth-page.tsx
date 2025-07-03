@@ -78,14 +78,11 @@ export default function EnhancedAuthPage() {
   };
 
   const departments = [
-    "Computer Science Engineering",
-    "Electronics & Communication Engineering",
-    "Electrical & Electronics Engineering",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Chemical Engineering",
-    "Information Technology",
-    "Automobile Engineering"
+    "CSE",
+    "IT", 
+    "ECE",
+    "EEE",
+    "CSM"
   ];
 
   return (
