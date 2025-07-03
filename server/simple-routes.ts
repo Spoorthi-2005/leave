@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./simple-storage";
 import { setupAuth } from "./simple-auth";
-import { whatsappService } from "./whatsapp-service";
+import { twilioWhatsAppService } from "./twilio-whatsapp-service";
 import { z } from "zod";
 
 const leaveApplicationSchema = z.object({
@@ -282,16 +282,15 @@ export function registerRoutes(app: Express): Server {
             const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
             // Send WhatsApp notification
-            await whatsappService.sendLeaveApprovalNotification(
+            const duration = `${leaveDays} days (${start.toLocaleDateString()} - ${end.toLocaleDateString()})`;
+            await twilioWhatsAppService.sendLeaveNotification(
               applicant.phoneNumber,
               applicant.fullName,
               updatedApplication.type,
-              updatedApplication.startDate.toISOString(),
-              updatedApplication.endDate.toISOString(),
-              leaveDays,
+              duration,
+              finalStatus as 'approved' | 'rejected',
               req.user.fullName,
-              comments,
-              finalStatus
+              comments
             );
           }
         } catch (notificationError) {

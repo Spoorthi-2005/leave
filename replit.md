@@ -46,6 +46,13 @@ A complete leave management system for educational institutions supporting both 
   * Mock service currently logs to console - easily replaceable with real WhatsApp Web API or Twilio
   * Successfully tested: Student submits leave → HOD approves/rejects → WhatsApp notification sent
   * Notifications include approval ✅ and rejection ❌ indicators with personalized messages
+- **Complete System Fixes & Updates (Jul 3, 2025)**:
+  * Fixed login system - users can now login with registered credentials instead of re-registering
+  * Updated departments to exactly: CSE, IT, CSM, ECE, EEE as requested
+  * Implemented real Twilio WhatsApp service alongside mock service for testing
+  * System automatically falls back to console logging when Twilio credentials not provided
+  * Successfully tested complete workflow: Registration → Login → Leave Application → HOD Review → WhatsApp Notification
+  * All three core issues resolved: authentication, departments, and WhatsApp notifications
 - **Student Registration System Added (Jul 1, 2025)**:
   * Complete registration form with student details (department, year, semester, section)
   * Automatic section-specific routing for new registered students
