@@ -26,8 +26,8 @@ export async function initializeDemoData() {
       isActive: true
     });
 
-    // Create HOD for CSE
-    const hodUser = await storage.createUser({
+    // Create HODs for all departments (CSE, IT, ECE, EEE, CSM)
+    const hodCSE = await storage.createUser({
       username: "hod_cse",
       email: "hod.cse@gvpcew.edu.in",
       password: hashedPassword,
@@ -38,8 +38,52 @@ export async function initializeDemoData() {
       isActive: true
     });
 
-    // Create Faculty
-    const facultyUser = await storage.createUser({
+    const hodIT = await storage.createUser({
+      username: "hod_it",
+      email: "hod.it@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Rajesh Kumar",
+      role: "hod",
+      department: "IT",
+      phoneNumber: "+91-9876543221",
+      isActive: true
+    });
+
+    const hodECE = await storage.createUser({
+      username: "hod_ece",
+      email: "hod.ece@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Sunita Reddy",
+      role: "hod",
+      department: "ECE",
+      phoneNumber: "+91-9876543231",
+      isActive: true
+    });
+
+    const hodEEE = await storage.createUser({
+      username: "hod_eee",
+      email: "hod.eee@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Anil Sharma",
+      role: "hod",
+      department: "EEE",
+      phoneNumber: "+91-9876543241",
+      isActive: true
+    });
+
+    const hodCSM = await storage.createUser({
+      username: "hod_csm",
+      email: "hod.csm@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Meera Patel",
+      role: "hod",
+      department: "CSM",
+      phoneNumber: "+91-9876543251",
+      isActive: true
+    });
+
+    // Create Faculty for all departments
+    const facultyCSE = await storage.createUser({
       username: "faculty1",
       email: "faculty1@gvpcew.edu.in",
       password: hashedPassword,
@@ -50,8 +94,52 @@ export async function initializeDemoData() {
       isActive: true
     });
 
-    // Create Student
-    const studentUser = await storage.createUser({
+    const facultyIT = await storage.createUser({
+      username: "faculty_it",
+      email: "faculty.it@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Priya Gupta",
+      role: "teacher",
+      department: "IT",
+      phoneNumber: "+91-9876543222",
+      isActive: true
+    });
+
+    const facultyECE = await storage.createUser({
+      username: "faculty_ece",
+      email: "faculty.ece@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Ravi Verma",
+      role: "teacher",
+      department: "ECE",
+      phoneNumber: "+91-9876543232",
+      isActive: true
+    });
+
+    const facultyEEE = await storage.createUser({
+      username: "faculty_eee",
+      email: "faculty.eee@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Kavita Singh",
+      role: "teacher",
+      department: "EEE",
+      phoneNumber: "+91-9876543242",
+      isActive: true
+    });
+
+    const facultyCSM = await storage.createUser({
+      username: "faculty_csm",
+      email: "faculty.csm@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Dr. Neha Agarwal",
+      role: "teacher",
+      department: "CSM",
+      phoneNumber: "+91-9876543252",
+      isActive: true
+    });
+
+    // Create Students for all departments
+    const studentCSE = await storage.createUser({
       username: "teststudent",
       email: "student@gvpcew.edu.in",
       password: hashedPassword,
@@ -62,12 +150,56 @@ export async function initializeDemoData() {
       isActive: true
     });
 
+    const studentIT = await storage.createUser({
+      username: "student_it",
+      email: "student.it@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Riya Sharma",
+      role: "student",
+      department: "IT",
+      phoneNumber: "+91-9876543223",
+      isActive: true
+    });
+
+    const studentECE = await storage.createUser({
+      username: "student_ece",
+      email: "student.ece@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Ananya Patel",
+      role: "student",
+      department: "ECE",
+      phoneNumber: "+91-9876543233",
+      isActive: true
+    });
+
+    const studentEEE = await storage.createUser({
+      username: "student_eee",
+      email: "student.eee@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Shreya Reddy",
+      role: "student",
+      department: "EEE",
+      phoneNumber: "+91-9876543243",
+      isActive: true
+    });
+
+    const studentCSM = await storage.createUser({
+      username: "student_csm",
+      email: "student.csm@gvpcew.edu.in",
+      password: hashedPassword,
+      fullName: "Pooja Kumar",
+      role: "student",
+      department: "CSM",
+      phoneNumber: "+91-9876543253",
+      isActive: true
+    });
+
     console.log("Demo data initialized successfully!");
     console.log("Test accounts created:");
     console.log("- Admin: admin/password");
-    console.log("- HOD: hod_cse/password"); 
-    console.log("- Faculty: faculty1/password");
-    console.log("- Student: teststudent/password");
+    console.log("- HODs: hod_cse/password, hod_it/password, hod_ece/password, hod_eee/password, hod_csm/password");
+    console.log("- Faculty: faculty1/password, faculty_it/password, faculty_ece/password, faculty_eee/password, faculty_csm/password");
+    console.log("- Students: teststudent/password, student_it/password, student_ece/password, student_eee/password, student_csm/password");
 
   } catch (error) {
     console.error("Error initializing demo data:", error);

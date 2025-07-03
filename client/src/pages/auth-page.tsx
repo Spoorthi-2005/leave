@@ -339,9 +339,9 @@ export default function AuthPage() {
                           <SelectContent>
                             <SelectItem value="CSE">Computer Science Engineering (CSE)</SelectItem>
                             <SelectItem value="IT">Information Technology (IT)</SelectItem>
-                            <SelectItem value="CSM">Computer Science and Mathematics (CSM)</SelectItem>
                             <SelectItem value="ECE">Electronics and Communication Engineering (ECE)</SelectItem>
                             <SelectItem value="EEE">Electrical and Electronics Engineering (EEE)</SelectItem>
+                            <SelectItem value="CSM">Computer Science and Mathematics (CSM)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
