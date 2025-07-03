@@ -142,11 +142,22 @@ export function registerRoutes(app: Express): Server {
       }
 
       const applications = await storage.getPendingLeaveApplications();
-      // Filter only faculty applications for HOD
-      const facultyApplications = applications.filter(app => {
-        // Get applications from teachers in the same department
-        return app.status === "pending" && app.userId !== req.user.id;
-      });
+      // Filter only faculty applications for HOD - get applications from teachers
+      const facultyApplications = [];
+      
+      for (const app of applications) {
+        if (app.status === "pending" && app.userId !== req.user.id) {
+          // Check if the application is from a teacher
+          const applicant = await storage.getUser(app.userId);
+          if (applicant && applicant.role === "teacher") {
+            facultyApplications.push({
+              ...app,
+              studentName: applicant.fullName
+            });
+          }
+        }
+      }
+      
       res.json(facultyApplications);
     } catch (error) {
       console.error("Error fetching pending faculty applications:", error);
