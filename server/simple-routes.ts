@@ -1,0 +1,181 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./simple-storage";
+import { setupAuth } from "./simple-auth";
+import { z } from "zod";
+
+const leaveApplicationSchema = z.object({
+  type: z.enum(["sick", "personal", "emergency", "vacation"]),
+  startDate: z.string(),
+  endDate: z.string(),
+  reason: z.string().min(10),
+});
+
+const reviewSchema = z.object({
+  status: z.enum(["approved", "rejected"]),
+  comments: z.string().min(1),
+});
+
+export function registerRoutes(app: Express): Server {
+  // Setup authentication
+  setupAuth(app);
+
+  // Leave Applications Routes
+  
+  // Student: Create leave application
+  app.post("/api/leave-applications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "student") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const validation = leaveApplicationSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid data", details: validation.error.errors });
+      }
+
+      const { type, startDate, endDate, reason } = validation.data;
+
+      const application = await storage.createLeaveApplication({
+        userId: req.user.id,
+        type,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        reason,
+        status: "pending",
+      });
+
+      res.status(201).json(application);
+    } catch (error) {
+      console.error("Error creating leave application:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Student: Get own applications
+  app.get("/api/leave-applications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "student") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getUserLeaveApplications(req.user.id);
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching leave applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Student: Get leave balance
+  app.get("/api/leave-balance", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "student") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const currentYear = new Date().getFullYear();
+      let balance = await storage.getUserLeaveBalance(req.user.id, currentYear);
+      
+      if (!balance) {
+        balance = await storage.createLeaveBalance(req.user.id, currentYear);
+      }
+
+      res.json(balance);
+    } catch (error) {
+      console.error("Error fetching leave balance:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Teacher: Get pending applications
+  app.get("/api/leave-applications/pending", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getPendingLeaveApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching pending applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Teacher: Get all applications
+  app.get("/api/leave-applications/all", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getAllLeaveApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching all applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Teacher: Review application
+  app.patch("/api/leave-applications/:id/review", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      const validation = reviewSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid data", details: validation.error.errors });
+      }
+
+      const { status, comments } = validation.data;
+
+      const updatedApplication = await storage.updateLeaveApplication(
+        applicationId,
+        status,
+        req.user.id,
+        comments
+      );
+
+      if (!updatedApplication) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error("Error reviewing application:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Teacher: Get stats
+  app.get("/api/teacher/stats", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const allApplications = await storage.getAllLeaveApplications();
+      const pendingCount = allApplications.filter(app => app.status === "pending").length;
+      const approvedCount = allApplications.filter(app => app.status === "approved").length;
+      const rejectedCount = allApplications.filter(app => app.status === "rejected").length;
+
+      res.json({
+        total: allApplications.length,
+        pending: pendingCount,
+        approved: approvedCount,
+        rejected: rejectedCount,
+      });
+    } catch (error) {
+      console.error("Error fetching teacher stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
