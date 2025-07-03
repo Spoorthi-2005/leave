@@ -7,15 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, FileText, Clock, CheckCircle, XCircle, LogOut, Eye } from "lucide-react";
+import { Users, FileText, Clock, CheckCircle, XCircle, LogOut, Eye, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 export default function TeacherDashboard() {
   const { user, logoutMutation } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [reviewComments, setReviewComments] = useState("");
+  
+  // Teacher's own leave application state
+  const [leaveForm, setLeaveForm] = useState({
+    type: "",
+    startDate: "",
+    endDate: "",
+    reason: ""
+  });
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
 
   const { data: pendingApplications = [] } = useQuery({
     queryKey: ["/api/leave-applications/pending"],
@@ -27,6 +38,22 @@ export default function TeacherDashboard() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/teacher/stats"],
+  });
+
+  const { data: myApplications = [] } = useQuery({
+    queryKey: ["/api/my-leave-applications"],
+  });
+
+  const submitLeaveMutation = useMutation({
+    mutationFn: async (leaveData: any) => {
+      const response = await apiRequest("POST", "/api/leave-applications", leaveData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-leave-applications"] });
+      setLeaveForm({ type: "", startDate: "", endDate: "", reason: "" });
+      setShowLeaveForm(false);
+    },
   });
 
   const reviewMutation = useMutation({
@@ -54,6 +81,14 @@ export default function TeacherDashboard() {
       status,
       comments: reviewComments,
     });
+  };
+
+  const handleSubmitLeave = () => {
+    if (!leaveForm.type || !leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason.trim()) {
+      return;
+    }
+
+    submitLeaveMutation.mutate(leaveForm);
   };
 
   const getStatusBadge = (status: string) => {
@@ -147,11 +182,135 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="pending" className="space-y-6">
+        <Tabs defaultValue="my-leaves" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="pending">Pending Reviews ({pendingApplications.length})</TabsTrigger>
-            <TabsTrigger value="all">All Applications ({allApplications.length})</TabsTrigger>
+            <TabsTrigger value="my-leaves">My Leave Applications ({myApplications.length})</TabsTrigger>
+            <TabsTrigger value="pending">Student Reviews ({pendingApplications.length})</TabsTrigger>
+            <TabsTrigger value="all">All Student Applications ({allApplications.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="my-leaves">
+            <div className="space-y-6">
+              {/* Submit New Leave Application */}
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Submit Leave Application</CardTitle>
+                    <Button onClick={() => setShowLeaveForm(!showLeaveForm)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {showLeaveForm ? "Cancel" : "New Application"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                {showLeaveForm && (
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="type">Leave Type</Label>
+                        <Select value={leaveForm.type} onValueChange={(value) => setLeaveForm({...leaveForm, type: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select leave type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sick">Sick Leave</SelectItem>
+                            <SelectItem value="personal">Personal Leave</SelectItem>
+                            <SelectItem value="vacation">Vacation</SelectItem>
+                            <SelectItem value="emergency">Emergency Leave</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="startDate">Start Date</Label>
+                          <Input
+                            type="date"
+                            value={leaveForm.startDate}
+                            onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="endDate">End Date</Label>
+                          <Input
+                            type="date"
+                            value={leaveForm.endDate}
+                            onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="reason">Reason</Label>
+                      <Textarea
+                        value={leaveForm.reason}
+                        onChange={(e) => setLeaveForm({...leaveForm, reason: e.target.value})}
+                        placeholder="Please provide a detailed reason for your leave..."
+                        rows={3}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleSubmitLeave}
+                      disabled={submitLeaveMutation.isPending || !leaveForm.type || !leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason.trim()}
+                      className="w-full"
+                    >
+                      {submitLeaveMutation.isPending ? "Submitting..." : "Submit Application"}
+                    </Button>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* My Applications List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Leave Applications</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {myApplications.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">
+                      No leave applications submitted yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {myApplications.map((application: any) => (
+                        <div
+                          key={application.id}
+                          className="border rounded-lg p-4"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-4 mb-2">
+                                <Badge className="capitalize">{application.type}</Badge>
+                                {getStatusBadge(application.status)}
+                                <Badge variant="outline">
+                                  {getDaysCount(application.startDate, application.endDate)} days
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {format(new Date(application.startDate), "MMM dd, yyyy")} - {" "}
+                                {format(new Date(application.endDate), "MMM dd, yyyy")}
+                              </p>
+                              <p className="text-gray-700 mb-3">{application.reason}</p>
+                              {application.comments && (
+                                <div className="bg-gray-50 p-3 rounded">
+                                  <p className="text-sm font-medium">Review Comments:</p>
+                                  <p className="text-sm text-gray-700">{application.comments}</p>
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500 mt-2">
+                                Applied: {format(new Date(application.createdAt), "MMM dd, yyyy 'at' h:mm a")}
+                                {application.reviewedAt && (
+                                  <> • Reviewed: {format(new Date(application.reviewedAt), "MMM dd, yyyy 'at' h:mm a")}</>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="pending">
             <Card>

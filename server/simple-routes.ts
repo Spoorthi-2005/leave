@@ -78,6 +78,21 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Alias for frontend convenience
+  app.get("/api/my-leave-applications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || !["student", "teacher", "hod"].includes(req.user?.role)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getUserLeaveApplications(req.user.id);
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching my leave applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Student: Get leave balance
   app.get("/api/leave-balance", async (req, res) => {
     try {
