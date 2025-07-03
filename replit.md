@@ -32,6 +32,13 @@ A complete leave management system for educational institutions supporting both 
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
+- **Student Leave Routing Updated to HOD for >5 Days (Jul 3, 2025)**:
+  * Modified leave application workflow: Student leaves >5 days now automatically route to HOD instead of faculty
+  * Updated HOD name to "Dr PVSL Jagadamba" in demo data
+  * Added new HOD endpoint /api/leave-applications/hod-review for student applications forwarded to HOD
+  * Enhanced HOD dashboard with new "Student Reviews (>5 days)" tab showing applications requiring HOD approval
+  * Successfully tested end-to-end: Student submits 9-day leave → automatically forwarded to HOD → appears in HOD dashboard
+  * HOD can now approve/reject student applications >5 days with comment system
 - **Student Registration System Added (Jul 1, 2025)**:
   * Complete registration form with student details (department, year, semester, section)
   * Automatic section-specific routing for new registered students

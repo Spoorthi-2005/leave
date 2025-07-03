@@ -31,7 +31,7 @@ export async function initializeDemoData() {
       username: "hod_cse",
       email: "hod.cse@gvpcew.edu.in",
       password: hashedPassword,
-      fullName: "Dr. Rajesh Kumar",
+      fullName: "Dr PVSL Jagadamba",
       role: "hod",
       department: "CSE",
       phoneNumber: "+91-9876543211",

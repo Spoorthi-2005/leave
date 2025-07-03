@@ -24,7 +24,7 @@ export interface LeaveApplication {
   startDate: Date;
   endDate: Date;
   reason: string;
-  status: "pending" | "approved" | "rejected" | "forwarded_to_admin";
+  status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod";
   reviewedBy?: number;
   reviewedAt?: Date;
   comments?: string;
@@ -58,7 +58,7 @@ export interface IStorage {
   getUserLeaveApplications(userId: number): Promise<LeaveApplication[]>;
   getPendingLeaveApplications(): Promise<LeaveApplication[]>;
   getAllLeaveApplications(): Promise<LeaveApplication[]>;
-  updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
+  updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
   
   // Leave Balance
   getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;

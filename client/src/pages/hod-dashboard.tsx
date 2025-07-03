@@ -21,6 +21,10 @@ export default function HODDashboard() {
     queryKey: ["/api/leave-applications/pending-faculty"],
   });
 
+  const { data: pendingStudentApplications = [] } = useQuery({
+    queryKey: ["/api/leave-applications/hod-review"],
+  });
+
   const { data: allApplications = [] } = useQuery({
     queryKey: ["/api/leave-applications/all"],
   });
@@ -35,6 +39,7 @@ export default function HODDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/pending-faculty"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/hod-review"] });
       queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/all"] });
       setSelectedApplication(null);
       setReviewComments("");
@@ -131,6 +136,16 @@ export default function HODDashboard() {
           
           <Card>
             <CardContent className="flex items-center p-6">
+              <Users className="h-8 w-8 text-purple-600 mr-4" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{pendingStudentApplications.length}</p>
+                <p className="text-sm text-gray-500">Student Reviews ({'>'}5 days)</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-6">
               <CheckCircle className="h-8 w-8 text-green-600 mr-4" />
               <div>
                 <p className="text-2xl font-bold text-gray-900">
@@ -156,8 +171,9 @@ export default function HODDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="pending">Pending Faculty Reviews ({pendingFacultyApplications.length})</TabsTrigger>
+            <TabsTrigger value="students">Student Reviews ({pendingStudentApplications.length})</TabsTrigger>
             <TabsTrigger value="all">All Applications ({allApplications.length})</TabsTrigger>
           </TabsList>
 
@@ -213,6 +229,108 @@ export default function HODDashboard() {
                                   <div className="space-y-4">
                                     <div className="space-y-2">
                                       <p><strong>Faculty:</strong> {selectedApplication.studentName}</p>
+                                      <p><strong>Type:</strong> {selectedApplication.type}</p>
+                                      <p><strong>Duration:</strong> {calculateLeaveDays(selectedApplication.startDate, selectedApplication.endDate)} days</p>
+                                      <p><strong>Dates:</strong> {format(new Date(selectedApplication.startDate), "MMM dd, yyyy")} - {format(new Date(selectedApplication.endDate), "MMM dd, yyyy")}</p>
+                                      <p><strong>Reason:</strong> {selectedApplication.reason}</p>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label htmlFor="comments">Review Comments *</Label>
+                                      <Textarea
+                                        id="comments"
+                                        placeholder="Enter your review comments..."
+                                        value={reviewComments}
+                                        onChange={(e) => setReviewComments(e.target.value)}
+                                        rows={3}
+                                      />
+                                    </div>
+                                    
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        onClick={() => handleReview("approved")}
+                                        disabled={!reviewComments.trim() || reviewMutation.isPending}
+                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        onClick={() => handleReview("rejected")}
+                                        disabled={!reviewComments.trim() || reviewMutation.isPending}
+                                        variant="destructive"
+                                        className="flex-1"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" />
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="students" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Student Leave Applications ({'>'}5 days) Requiring HOD Approval</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pendingStudentApplications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No student applications requiring HOD approval</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingStudentApplications.map((application: any) => (
+                      <div key={application.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-4">
+                              <div>
+                                <h3 className="font-medium text-gray-900">{application.studentName}</h3>
+                                <p className="text-sm text-gray-500">
+                                  {format(new Date(application.startDate), "MMM dd, yyyy")} - {format(new Date(application.endDate), "MMM dd, yyyy")}
+                                  <span className="ml-2 text-purple-600">({calculateLeaveDays(application.startDate, application.endDate)} days)</span>
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                {application.type}
+                              </Badge>
+                              {getStatusBadge(application.status)}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-2">{application.reason}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setSelectedApplication(application)}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Review
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Review Student Leave Application</DialogTitle>
+                                </DialogHeader>
+                                {selectedApplication && (
+                                  <div className="space-y-4">
+                                    <div className="space-y-2">
+                                      <p><strong>Student:</strong> {selectedApplication.studentName}</p>
                                       <p><strong>Type:</strong> {selectedApplication.type}</p>
                                       <p><strong>Duration:</strong> {calculateLeaveDays(selectedApplication.startDate, selectedApplication.endDate)} days</p>
                                       <p><strong>Dates:</strong> {format(new Date(selectedApplication.startDate), "MMM dd, yyyy")} - {format(new Date(selectedApplication.endDate), "MMM dd, yyyy")}</p>

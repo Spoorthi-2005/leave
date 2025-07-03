@@ -42,8 +42,11 @@ export function registerRoutes(app: Express): Server {
       const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
       // Determine status based on role and duration
-      let status: "pending" | "approved" | "rejected" | "forwarded_to_admin" = "pending";
-      if (req.user.role === "teacher" && leaveDays > 7) {
+      let status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" = "pending";
+      
+      if (req.user.role === "student" && leaveDays > 5) {
+        status = "forwarded_to_hod";
+      } else if (req.user.role === "teacher" && leaveDays > 7) {
         status = "forwarded_to_admin";
       }
 
@@ -161,6 +164,25 @@ export function registerRoutes(app: Express): Server {
       res.json(facultyApplications);
     } catch (error) {
       console.error("Error fetching pending faculty applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // HOD: Get student applications forwarded to HOD (>5 days)
+  app.get("/api/leave-applications/hod-review", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "hod") {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const applications = await storage.getAllLeaveApplications();
+      // Filter applications forwarded to HOD
+      const hodApplications = applications.filter(app => 
+        app.status === "forwarded_to_hod"
+      );
+      res.json(hodApplications);
+    } catch (error) {
+      console.error("Error fetching HOD applications:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
