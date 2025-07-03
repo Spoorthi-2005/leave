@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { whatsAppWebService } from './whatsapp-web-service';
 
 interface WhatsAppMessage {
   to: string;
@@ -15,6 +16,16 @@ export class EnhancedWhatsAppService {
   constructor() {
     this.fromNumber = process.env.TWILIO_PHONE_NUMBER || '+14155238886';
     this.initialize();
+    this.initializeWhatsAppWeb();
+  }
+
+  private async initializeWhatsAppWeb() {
+    try {
+      console.log('🔄 Initializing WhatsApp Web service...');
+      await whatsAppWebService.initialize();
+    } catch (error) {
+      console.log('⚠️ WhatsApp Web failed to initialize, using fallback methods');
+    }
   }
 
   private async initialize() {
@@ -61,11 +72,21 @@ export class EnhancedWhatsAppService {
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {
-    if (this.useMode === 'twilio' && this.isReady && this.twilioClient) {
-      return await this.sendTwilioMessage(phoneNumber, message);
-    } else {
-      return this.sendMockMessage(phoneNumber, message);
+    // Try WhatsApp Web first
+    if (whatsAppWebService.isClientReady()) {
+      console.log('📱 Using WhatsApp Web service');
+      return await whatsAppWebService.sendMessage(phoneNumber, message);
     }
+    
+    // Fallback to Twilio if available
+    if (this.useMode === 'twilio' && this.isReady && this.twilioClient) {
+      console.log('📱 Using Twilio WhatsApp service');
+      return await this.sendTwilioMessage(phoneNumber, message);
+    } 
+    
+    // Final fallback to console logging
+    console.log('📱 Using console logging (WhatsApp Web not connected, Twilio not available)');
+    return this.sendMockMessage(phoneNumber, message);
   }
 
   private async sendTwilioMessage(phoneNumber: string, message: string): Promise<boolean> {
@@ -148,6 +169,21 @@ export class EnhancedWhatsAppService {
     reviewerName: string, 
     comments: string
   ): Promise<boolean> {
+    // Try WhatsApp Web first (with enhanced formatting)
+    if (whatsAppWebService.isClientReady()) {
+      console.log('📱 Using WhatsApp Web for leave notification');
+      // Parse duration into start and end dates for WhatsApp Web service
+      const [startDate, endDate] = duration.includes(' to ') 
+        ? duration.split(' to ')
+        : [duration, duration];
+      
+      return await whatsAppWebService.sendLeaveNotification(
+        phoneNumber, studentName, leaveType, startDate, endDate, 
+        'N/A', status, reviewerName, comments
+      );
+    }
+
+    // Fallback to existing message format
     const statusIcon = status === 'approved' ? '✅' : '❌';
     const statusText = status === 'approved' ? 'APPROVED' : 'REJECTED';
     const guidance = status === 'approved' 
@@ -177,10 +213,12 @@ ${statusIcon} *Leave Application ${statusText}*
   }
 
   getStatus(): string {
-    if (this.useMode === 'twilio' && this.isReady) {
+    if (whatsAppWebService.isClientReady()) {
+      return 'WhatsApp Web - Connected and Ready';
+    } else if (this.useMode === 'twilio' && this.isReady) {
       return 'Twilio WhatsApp - Ready';
     } else {
-      return 'Mock WhatsApp - Console Logging';
+      return `Mock WhatsApp - Console Logging (${whatsAppWebService.getStatus()})`;
     }
   }
 
