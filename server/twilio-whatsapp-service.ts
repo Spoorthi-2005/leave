@@ -18,8 +18,8 @@ export class TwilioWhatsAppService {
 
   private async initialize() {
     try {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+      const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
 
       if (!accountSid || !authToken) {
         console.log('🔧 Twilio credentials not found - using mock WhatsApp service');
@@ -28,14 +28,24 @@ export class TwilioWhatsAppService {
         return;
       }
 
+      // Log sanitized credentials for debugging
+      console.log(`🔍 Account SID: ${accountSid.substring(0, 10)}...`);
+      console.log(`🔍 Auth Token: ${authToken.substring(0, 8)}...`);
+
       this.client = twilio(accountSid, authToken);
-      this.isReady = true;
       
+      // Test the credentials by making a simple API call
+      await this.client.api.accounts(accountSid).fetch();
+      
+      this.isReady = true;
       console.log('✅ Twilio WhatsApp service initialized successfully');
       console.log(`📱 WhatsApp notifications will be sent from: ${this.fromNumber}`);
       
-    } catch (error) {
-      console.error('❌ Failed to initialize Twilio WhatsApp service:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to initialize Twilio WhatsApp service:', error.message);
+      if (error.code === 20003) {
+        console.log('🔧 Authentication failed - please verify Account SID and Auth Token');
+      }
       this.isReady = false;
     }
   }
