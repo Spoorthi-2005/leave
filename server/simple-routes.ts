@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./simple-storage";
 import { setupAuth } from "./simple-auth";
+import { whatsappService } from "./whatsapp-service";
 import { z } from "zod";
 
 const leaveApplicationSchema = z.object({
@@ -267,6 +268,36 @@ export function registerRoutes(app: Express): Server {
 
       if (!updatedApplication) {
         return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Send WhatsApp notification if application is approved or rejected (not forwarded)
+      if (finalStatus === "approved" || finalStatus === "rejected") {
+        try {
+          // Get the student/applicant details
+          const applicant = await storage.getUser(updatedApplication.userId);
+          if (applicant && applicant.phoneNumber) {
+            // Calculate leave duration
+            const start = new Date(updatedApplication.startDate);
+            const end = new Date(updatedApplication.endDate);
+            const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Send WhatsApp notification
+            await whatsappService.sendLeaveApprovalNotification(
+              applicant.phoneNumber,
+              applicant.fullName,
+              updatedApplication.type,
+              updatedApplication.startDate.toISOString(),
+              updatedApplication.endDate.toISOString(),
+              leaveDays,
+              req.user.fullName,
+              comments,
+              finalStatus
+            );
+          }
+        } catch (notificationError) {
+          console.error("Failed to send WhatsApp notification:", notificationError);
+          // Don't fail the request if notification fails
+        }
       }
 
       res.json(updatedApplication);

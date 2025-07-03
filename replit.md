@@ -39,6 +39,13 @@ A complete leave management system for educational institutions supporting both 
   * Enhanced HOD dashboard with new "Student Reviews (>5 days)" tab showing applications requiring HOD approval
   * Successfully tested end-to-end: Student submits 9-day leave → automatically forwarded to HOD → appears in HOD dashboard
   * HOD can now approve/reject student applications >5 days with comment system
+- **WhatsApp Notifications for Leave Decisions Added (Jul 3, 2025)**:
+  * Automatic WhatsApp notifications sent when leave applications are approved or rejected
+  * Professional message formatting with GVPCEW branding and complete application details
+  * Includes reviewer name, comments, leave duration, and actionable guidance
+  * Mock service currently logs to console - easily replaceable with real WhatsApp Web API or Twilio
+  * Successfully tested: Student submits leave → HOD approves/rejects → WhatsApp notification sent
+  * Notifications include approval ✅ and rejection ❌ indicators with personalized messages
 - **Student Registration System Added (Jul 1, 2025)**:
   * Complete registration form with student details (department, year, semester, section)
   * Automatic section-specific routing for new registered students

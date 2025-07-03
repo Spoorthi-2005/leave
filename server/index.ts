@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeDemoData } from "./demo-data";
 import { initializeUniversityData } from "./university-data";
 import { securityConfig } from "./security";
+import { whatsappService } from "./whatsapp-service";
 
 const app = express();
 
@@ -113,6 +114,7 @@ app.use((req, res, next) => {
         server.listen(port, "0.0.0.0", async () => {
           log(`serving on port ${port}`);
           await initializeDemoData();
+          console.log("📱 WhatsApp notification service initialized - scan QR code to connect");
         });
       }, 2000);
     } else {
@@ -124,5 +126,6 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Initialize demo data after server starts
     await initializeDemoData();
+    console.log("📱 WhatsApp notification service initialized - scan QR code to connect");
   });
 })();
