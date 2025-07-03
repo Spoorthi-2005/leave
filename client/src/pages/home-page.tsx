@@ -17,6 +17,10 @@ export default function HomePage() {
     return <Redirect to="/student" />;
   } else if (user.role === "teacher") {
     return <Redirect to="/teacher" />;
+  } else if (user.role === "hod") {
+    return <Redirect to="/hod" />;
+  } else if (user.role === "admin") {
+    return <Redirect to="/admin" />;
   }
 
   return (

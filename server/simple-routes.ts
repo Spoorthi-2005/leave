@@ -158,10 +158,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Teacher: Get all applications
+  // Teacher/HOD/Admin: Get all applications
   app.get("/api/leave-applications/all", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user?.role !== "teacher") {
+      if (!req.isAuthenticated() || !["teacher", "hod", "admin"].includes(req.user?.role)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 

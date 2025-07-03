@@ -3,9 +3,9 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["student", "teacher", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["student", "teacher", "hod", "admin"]);
 export const leaveTypeEnum = pgEnum("leave_type", ["sick", "personal", "emergency", "vacation"]);
-export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected", "forwarded_to_admin"]);
 
 // Users table
 export const users = pgTable("users", {

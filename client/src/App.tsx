@@ -10,6 +10,8 @@ import AuthPage from "@/pages/auth";
 import HomePage from "@/pages/home-page";
 import StudentPage from "@/pages/student";
 import TeacherPage from "@/pages/teacher";
+import HODDashboard from "@/pages/hod-dashboard";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   return (
@@ -17,6 +19,8 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/student" component={StudentPage} />
       <ProtectedRoute path="/teacher" component={TeacherPage} />
+      <ProtectedRoute path="/hod" component={HODDashboard} />
+      <ProtectedRoute path="/admin" component={AdminDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
