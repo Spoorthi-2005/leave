@@ -70,29 +70,49 @@ export class EnhancedWhatsAppService {
 
   private async sendTwilioMessage(phoneNumber: string, message: string): Promise<boolean> {
     try {
-      const formattedFrom = `whatsapp:${this.fromNumber}`;
+      // Use sandbox number for WhatsApp
+      const sandboxFrom = 'whatsapp:+14155238886'; // Twilio WhatsApp sandbox number
       const formattedTo = phoneNumber.startsWith('whatsapp:') 
         ? phoneNumber 
         : `whatsapp:${phoneNumber}`;
 
+      console.log(`🔄 Attempting WhatsApp message from ${sandboxFrom} to ${formattedTo}`);
+
       const messageResponse = await this.twilioClient!.messages.create({
-        from: formattedFrom,
+        from: sandboxFrom,
         to: formattedTo,
         body: message
       });
 
-      console.log('✅ Real WhatsApp message sent successfully');
+      console.log('✅ REAL WHATSAPP MESSAGE SENT SUCCESSFULLY!');
       console.log(`📱 Message SID: ${messageResponse.sid}`);
       console.log(`👤 Sent to: ${phoneNumber}`);
+      console.log(`🎯 Status: ${messageResponse.status}`);
       
       return true;
     } catch (error: any) {
       console.error('❌ Failed to send Twilio WhatsApp message:', error.message);
+      console.error(`❌ Error code: ${error.code}`);
+      console.error(`❌ Error details:`, error);
       
       if (error.code === 21614) {
-        console.log('🔧 Error 21614: Recipient not joined sandbox');
-        console.log('📱 User needs to send join code to your Twilio number first');
-        console.log(`💡 Instructions: Send "join ${this.getJoinCode()}" to ${this.fromNumber}`);
+        console.log('🔧 Error 21614: Recipient not joined WhatsApp sandbox');
+        console.log('📱 ═════════════════════════════════════════════════════════════');
+        console.log('📱 TO RECEIVE REAL WHATSAPP MESSAGES:');
+        console.log('📱 ═════════════════════════════════════════════════════════════');
+        console.log(`📱 1. Save this number in your phone: +1 415 523 8886`);
+        console.log(`📱 2. Send this message to +1 415 523 8886: "join ${this.getJoinCode()}"`);
+        console.log('📱 3. Wait for confirmation message from Twilio');
+        console.log('📱 4. Then test leave application again');
+        console.log('📱 ═════════════════════════════════════════════════════════════');
+        console.log('📱 Current Status: Using console logging until sandbox joined');
+        console.log('📱 ═════════════════════════════════════════════════════════════');
+      } else if (error.code === 21606) {
+        console.log('🔧 Error 21606: WhatsApp channel not found');
+        console.log('📱 Solution: Join WhatsApp sandbox first (see instructions above)');
+      } else {
+        console.log(`🔧 Unexpected error: ${error.message}`);
+        console.log('📱 Check WHATSAPP_REAL_SETUP.md for complete setup guide');
       }
       
       // Fallback to mock
