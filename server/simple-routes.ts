@@ -43,12 +43,13 @@ export function registerRoutes(app: Express): Server {
       const leaveDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
       // Determine status based on role and duration
-      let status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" = "pending";
+      let status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" | "admin_pending" = "pending";
       
       if (req.user.role === "student" && leaveDays > 5) {
         status = "forwarded_to_hod";
-      } else if (req.user.role === "teacher" && leaveDays > 7) {
-        status = "forwarded_to_admin";
+      } else if (req.user.role === "teacher" && leaveDays > 10) {
+        status = "admin_pending";
+        console.log(`📋 Faculty leave exceeding 10 days (${leaveDays} days) - routing to admin for ${req.user.fullName}`);
       }
 
       const application = await storage.createLeaveApplication({
@@ -328,6 +329,103 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Error fetching teacher stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get faculty applications for review
+  app.get("/api/admin/faculty-applications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "admin") {
+        return res.status(401).json({ error: "Admin access required" });
+      }
+
+      const applications = await storage.getFacultyApplicationsForAdmin();
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching faculty applications for admin:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get pending applications requiring admin approval
+  app.get("/api/admin/pending-applications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "admin") {
+        return res.status(401).json({ error: "Admin access required" });
+      }
+
+      const applications = await storage.getAdminPendingApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching admin pending applications:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Review faculty leave application
+  app.post("/api/admin/review-application/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== "admin") {
+        return res.status(401).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { action, comments } = req.body;
+
+      if (!action || !["approve", "reject"].includes(action)) {
+        return res.status(400).json({ error: "Invalid action" });
+      }
+
+      const finalStatus = action === "approve" ? "admin_approved" : "admin_rejected";
+      const updatedApplication = await storage.updateLeaveApplication(
+        parseInt(id),
+        finalStatus as any,
+        req.user.id,
+        comments || ""
+      );
+
+      if (!updatedApplication) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Send WhatsApp notification for admin decisions
+      if (finalStatus === "admin_approved" || finalStatus === "admin_rejected") {
+        try {
+          const applicant = await storage.getUser(updatedApplication.userId);
+          if (applicant?.phoneNumber) {
+            const statusIcon = finalStatus === "admin_approved" ? "✅" : "❌";
+            const statusText = finalStatus === "admin_approved" ? "APPROVED" : "REJECTED";
+            
+            const message = `
+🏛️ GVPCEW - Admin Decision ${statusIcon}
+
+Your leave application has been ${statusText} by Admin:
+
+👤 Name: ${applicant.fullName}
+📅 Leave: ${updatedApplication.startDate.toDateString()} to ${updatedApplication.endDate.toDateString()}
+📝 Type: ${updatedApplication.type.toUpperCase()}
+💬 Admin Comments: ${comments || 'No additional comments'}
+
+${finalStatus === "admin_approved" 
+  ? "Your leave has been approved. Please coordinate with your department." 
+  : "Your leave has been rejected. Please contact admin for clarification."}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GVPCEW Leave Management System
+            `.trim();
+
+            const { whatsAppWebService } = await import('./whatsapp-web-service');
+            await whatsAppWebService.sendMessage(applicant.phoneNumber, message);
+          }
+        } catch (whatsappError) {
+          console.error("WhatsApp notification failed:", whatsappError);
+        }
+      }
+
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error("Error reviewing application:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

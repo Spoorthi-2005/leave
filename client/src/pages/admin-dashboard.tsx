@@ -1,329 +1,398 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/simple-auth";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, FileText, Clock, CheckCircle, XCircle, LogOut, Eye, Shield, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Clock, Users, CheckCircle, XCircle, User, Building2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface LeaveApplication {
+  id: number;
+  userId: number;
+  type: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: string;
+  reviewedBy?: number;
+  reviewedAt?: string;
+  comments?: string;
+  createdAt: string;
+  studentName?: string;
+  reviewerName?: string;
+}
 
 export default function AdminDashboard() {
-  const { user, logoutMutation } = useAuth();
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [selectedApplication, setSelectedApplication] = useState<LeaveApplication | null>(null);
   const [reviewComments, setReviewComments] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: adminApplications = [] } = useQuery({
-    queryKey: ["/api/leave-applications/admin-review"],
+  // Fetch pending faculty applications
+  const { data: pendingApplications = [], isLoading: loadingPending } = useQuery({
+    queryKey: ["/api/admin/pending-applications"],
+    refetchInterval: 5000,
   });
 
-  const { data: allApplications = [] } = useQuery({
-    queryKey: ["/api/leave-applications/all"],
+  // Fetch all faculty applications
+  const { data: allFacultyApplications = [], isLoading: loadingAll } = useQuery({
+    queryKey: ["/api/admin/faculty-applications"],
+    refetchInterval: 5000,
   });
 
+  // Review application mutation
   const reviewMutation = useMutation({
-    mutationFn: async ({ id, status, comments }: { id: number; status: string; comments: string }) => {
-      const response = await apiRequest("PATCH", `/api/leave-applications/${id}/review`, {
-        status,
+    mutationFn: async ({ id, action, comments }: { id: number; action: string; comments: string }) => {
+      const response = await apiRequest("POST", `/api/admin/review-application/${id}`, {
+        action,
         comments,
       });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/admin-review"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leave-applications/all"] });
+    onSuccess: (data) => {
+      toast({
+        title: "Application Reviewed",
+        description: `Leave application has been ${data.status.includes('approved') ? 'approved' : 'rejected'} successfully.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/faculty-applications"] });
       setSelectedApplication(null);
       setReviewComments("");
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to review application",
+        variant: "destructive",
+      });
+    },
   });
 
-  const handleReview = (status: "approved" | "rejected") => {
-    if (!selectedApplication || !reviewComments.trim()) return;
+  const handleReview = async (action: "approve" | "reject") => {
+    if (!selectedApplication) return;
     
-    reviewMutation.mutate({
+    if (!reviewComments.trim()) {
+      toast({
+        title: "Comments Required",
+        description: "Please provide comments for your decision",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await reviewMutation.mutateAsync({
       id: selectedApplication.id,
-      status,
+      action,
       comments: reviewComments,
     });
   };
 
-  const getStatusBadge = (status: string) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case "approved":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
-      case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
-      case "forwarded_to_admin":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Admin Review Required</Badge>;
+      case "admin_pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "admin_approved":
+        return "bg-green-100 text-green-800";
+      case "admin_rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const calculateLeaveDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "admin_pending":
+        return "Pending Admin Review";
+      case "admin_approved":
+        return "Approved by Admin";
+      case "admin_rejected":
+        return "Rejected by Admin";
+      default:
+        return status.replace("_", " ").toUpperCase();
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-8 w-8 text-purple-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                  <p className="text-sm text-gray-500">Gayatri Vidya Parishad College of Engineering for Women</p>
-                </div>
+  const calculateDays = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  const ApplicationCard = ({ application }: { application: LeaveApplication }) => {
+    const days = calculateDays(application.startDate, application.endDate);
+    
+    return (
+      <Card className="mb-4 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                {application.studentName || `User ${application.userId}`}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {application.type.toUpperCase()}
+                </Badge>
+                <Badge className={getStatusColor(application.status)}>
+                  {getStatusText(application.status)}
+                </Badge>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                <p className="text-xs text-gray-500">System Administrator</p>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">
+                {days} day{days > 1 ? 's' : ''}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              <div className="text-xs text-gray-400">
+                Applied: {formatDate(application.createdAt)}
+              </div>
             </div>
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <span className="text-sm">
+                {formatDate(application.startDate)} - {formatDate(application.endDate)}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-700 mb-2">
+                <strong>Reason:</strong> {application.reason}
+              </p>
+            </div>
+            
+            {application.comments && (
+              <div className="bg-gray-50 p-3 rounded-md">
+                <p className="text-sm text-gray-700">
+                  <strong>Comments:</strong> {application.comments}
+                </p>
+              </div>
+            )}
+            
+            {application.status === "admin_pending" && (
+              <div className="flex gap-2 pt-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setSelectedApplication(application)}
+                      className="flex-1"
+                    >
+                      Review Application
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Review Faculty Leave Application</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-semibold">{application.studentName}</p>
+                        <p className="text-sm text-gray-600">
+                          {application.type.toUpperCase()} • {days} days
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {formatDate(application.startDate)} - {formatDate(application.endDate)}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-medium mb-1">Reason:</p>
+                        <p className="text-sm text-gray-700">{application.reason}</p>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Comments (Required)
+                        </label>
+                        <Textarea
+                          value={reviewComments}
+                          onChange={(e) => setReviewComments(e.target.value)}
+                          placeholder="Provide comments for your decision..."
+                          rows={3}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-green-200 text-green-700 hover:bg-green-50"
+                          onClick={() => handleReview("approve")}
+                          disabled={reviewMutation.isPending}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+                          onClick={() => handleReview("reject")}
+                          disabled={reviewMutation.isPending}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const pendingCount = pendingApplications.length;
+  const approvedCount = allFacultyApplications.filter(app => app.status === "admin_approved").length;
+  const rejectedCount = allFacultyApplications.filter(app => app.status === "admin_rejected").length;
+
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+        <p className="text-gray-600">
+          Review and manage faculty leave applications requiring admin approval
+        </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="flex items-center p-6">
-              <FileText className="h-8 w-8 text-blue-600 mr-4" />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-gray-900">{allApplications.length}</p>
-                <p className="text-sm text-gray-500">Total Applications</p>
+                <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="flex items-center p-6">
-              <AlertTriangle className="h-8 w-8 text-orange-600 mr-4" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{adminApplications.length}</p>
-                <p className="text-sm text-gray-500">Admin Review Required</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="flex items-center p-6">
-              <CheckCircle className="h-8 w-8 text-green-600 mr-4" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allApplications.filter(app => app.status === "approved").length}
-                </p>
-                <p className="text-sm text-gray-500">Approved</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="flex items-center p-6">
-              <XCircle className="h-8 w-8 text-red-600 mr-4" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allApplications.filter(app => app.status === "rejected").length}
-                </p>
-                <p className="text-sm text-gray-500">Rejected</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Main Content */}
-        <Tabs defaultValue="admin-review" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="admin-review">Admin Review Required ({adminApplications.length})</TabsTrigger>
-            <TabsTrigger value="all">All Applications ({allApplications.length})</TabsTrigger>
-          </TabsList>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Approved</p>
+                <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="admin-review" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <span>Long-Duration Faculty Leaves Requiring Admin Approval</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {adminApplications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No applications requiring admin review</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {adminApplications.map((application: any) => (
-                      <div key={application.id} className="border rounded-lg p-4 hover:bg-gray-50 border-orange-200 bg-orange-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <div>
-                                <h3 className="font-medium text-gray-900">{application.studentName}</h3>
-                                <p className="text-sm text-gray-500">
-                                  {format(new Date(application.startDate), "MMM dd, yyyy")} - {format(new Date(application.endDate), "MMM dd, yyyy")}
-                                  <span className="ml-2 text-orange-600 font-semibold">({calculateLeaveDays(application.startDate, application.endDate)} days - Long Duration)</span>
-                                </p>
-                              </div>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {application.type}
-                              </Badge>
-                              {getStatusBadge(application.status)}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2">{application.reason}</p>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedApplication(application)}
-                                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  Review
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle>Admin Review - Long Duration Leave</DialogTitle>
-                                </DialogHeader>
-                                {selectedApplication && (
-                                  <div className="space-y-4">
-                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                      <div className="flex items-center space-x-2">
-                                        <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                        <p className="text-sm font-medium text-orange-800">
-                                          Long Duration Leave ({calculateLeaveDays(selectedApplication.startDate, selectedApplication.endDate)} days)
-                                        </p>
-                                      </div>
-                                      <p className="text-xs text-orange-700 mt-1">
-                                        Faculty leaves over 7 days require admin approval
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <p><strong>Faculty:</strong> {selectedApplication.studentName}</p>
-                                      <p><strong>Type:</strong> {selectedApplication.type}</p>
-                                      <p><strong>Duration:</strong> {calculateLeaveDays(selectedApplication.startDate, selectedApplication.endDate)} days</p>
-                                      <p><strong>Dates:</strong> {format(new Date(selectedApplication.startDate), "MMM dd, yyyy")} - {format(new Date(selectedApplication.endDate), "MMM dd, yyyy")}</p>
-                                      <p><strong>Reason:</strong> {selectedApplication.reason}</p>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label htmlFor="comments">Admin Decision Comments *</Label>
-                                      <Textarea
-                                        id="comments"
-                                        placeholder="Enter your admin decision and comments..."
-                                        value={reviewComments}
-                                        onChange={(e) => setReviewComments(e.target.value)}
-                                        rows={3}
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex space-x-2">
-                                      <Button
-                                        onClick={() => handleReview("approved")}
-                                        disabled={!reviewComments.trim() || reviewMutation.isPending}
-                                        className="flex-1 bg-green-600 hover:bg-green-700"
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-1" />
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        onClick={() => handleReview("rejected")}
-                                        disabled={!reviewComments.trim() || reviewMutation.isPending}
-                                        variant="destructive"
-                                        className="flex-1"
-                                      >
-                                        <XCircle className="h-4 w-4 mr-1" />
-                                        Reject
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="all" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Leave Applications - System Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {allApplications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No applications found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {allApplications.map((application: any) => (
-                      <div key={application.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <div>
-                                <h3 className="font-medium text-gray-900">{application.studentName}</h3>
-                                <p className="text-sm text-gray-500">
-                                  {format(new Date(application.startDate), "MMM dd, yyyy")} - {format(new Date(application.endDate), "MMM dd, yyyy")}
-                                  <span className="ml-2 text-blue-600">({calculateLeaveDays(application.startDate, application.endDate)} days)</span>
-                                </p>
-                              </div>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {application.type}
-                              </Badge>
-                              {getStatusBadge(application.status)}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2">{application.reason}</p>
-                            {application.comments && (
-                              <p className="text-sm text-gray-500 mt-1 italic">Review: {application.comments}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Faculty</p>
+                <p className="text-2xl font-bold text-blue-600">{allFacultyApplications.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Tabs for different views */}
+      <Tabs defaultValue="pending" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="pending">
+            Pending Reviews ({pendingCount})
+          </TabsTrigger>
+          <TabsTrigger value="all">
+            All Faculty Applications ({allFacultyApplications.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Faculty Leave Applications Pending Admin Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingPending ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading applications...</p>
+                </div>
+              ) : pendingApplications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No faculty applications pending review</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingApplications.map((application) => (
+                    <ApplicationCard key={application.id} application={application} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="all" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                All Faculty Leave Applications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingAll ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading applications...</p>
+                </div>
+              ) : allFacultyApplications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <User className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No faculty applications found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {allFacultyApplications.map((application) => (
+                    <ApplicationCard key={application.id} application={application} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

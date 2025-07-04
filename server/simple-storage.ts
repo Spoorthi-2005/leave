@@ -24,7 +24,7 @@ export interface LeaveApplication {
   startDate: Date;
   endDate: Date;
   reason: string;
-  status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod";
+  status: "pending" | "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" | "admin_pending" | "admin_approved" | "admin_rejected";
   reviewedBy?: number;
   reviewedAt?: Date;
   comments?: string;
@@ -59,12 +59,17 @@ export interface IStorage {
   getUserLeaveApplications(userId: number): Promise<LeaveApplication[]>;
   getPendingLeaveApplications(): Promise<LeaveApplication[]>;
   getAllLeaveApplications(): Promise<LeaveApplication[]>;
-  updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
+  updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" | "admin_pending" | "admin_approved" | "admin_rejected", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined>;
+  
+  // Admin-specific methods
+  getAdminPendingApplications(): Promise<LeaveApplication[]>;
+  getFacultyApplicationsForAdmin(): Promise<LeaveApplication[]>;
   
   // Leave Balance
   getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined>;
   createLeaveBalance(userId: number, year: number): Promise<LeaveBalance>;
   updateLeaveBalance(userId: number, year: number, used: number): Promise<void>;
+  updatePendingLeaves(userId: number, year: number, pendingChange: number): Promise<void>;
   
   sessionStore: session.Store;
 }
@@ -203,7 +208,7 @@ export class MemoryStorage implements IStorage {
     return this.leaveApplications.find(app => app.id === id);
   }
 
-  async updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
+  async updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod" | "admin_pending" | "admin_approved" | "admin_rejected", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
     const appIndex = this.leaveApplications.findIndex(app => app.id === id);
     if (appIndex === -1) return undefined;
 
@@ -222,19 +227,43 @@ export class MemoryStorage implements IStorage {
     };
 
     // Handle leave balance updates based on status change
-    if (status === "approved") {
+    if (status === "approved" || status === "admin_approved") {
       // Move pending leaves to used leaves
       await this.updatePendingLeaves(app.userId, currentYear, -days); // Remove from pending
       await this.updateLeaveBalance(app.userId, currentYear, days);   // Add to used
       console.log(`✅ Leave approved: ${days} days moved from pending to used for user ${app.userId}`);
-    } else if (status === "rejected") {
+    } else if (status === "rejected" || status === "admin_rejected") {
       // Return pending leaves to available
       await this.updatePendingLeaves(app.userId, currentYear, -days); // Remove from pending
       console.log(`❌ Leave rejected: ${days} days returned to available for user ${app.userId}`);
     }
-    // Note: forwarded_to_admin and forwarded_to_hod don't change leave balance yet
+    // Note: forwarded_to_admin, forwarded_to_hod, and admin_pending don't change leave balance yet
 
     return this.leaveApplications[appIndex];
+  }
+
+  // Admin-specific methods
+  async getAdminPendingApplications(): Promise<LeaveApplication[]> {
+    return this.leaveApplications
+      .filter(app => app.status === "admin_pending")
+      .map(app => ({
+        ...app,
+        studentName: this.users.find(u => u.id === app.userId)?.fullName,
+        reviewerName: app.reviewedBy ? this.users.find(u => u.id === app.reviewedBy)?.fullName : undefined,
+      }));
+  }
+
+  async getFacultyApplicationsForAdmin(): Promise<LeaveApplication[]> {
+    return this.leaveApplications
+      .filter(app => {
+        const user = this.users.find(u => u.id === app.userId);
+        return user?.role === "teacher" && (app.status === "admin_pending" || app.status === "admin_approved" || app.status === "admin_rejected");
+      })
+      .map(app => ({
+        ...app,
+        studentName: this.users.find(u => u.id === app.userId)?.fullName,
+        reviewerName: app.reviewedBy ? this.users.find(u => u.id === app.reviewedBy)?.fullName : undefined,
+      }));
   }
 
   async getUserLeaveBalance(userId: number, year: number): Promise<LeaveBalance | undefined> {

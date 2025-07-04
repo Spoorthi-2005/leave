@@ -32,6 +32,16 @@ A complete leave management system for educational institutions supporting both 
 - **HOD Leave**: HOD → Admin → Approved
 
 ## Recent Changes
+- **Universal Access & Admin Dashboard Implementation (Jul 4, 2025)**:
+  * Complete universal access - any user can now register and login across entire university
+  * Admin dashboard created for faculty leave approvals exceeding 10 days
+  * Faculty leaves >10 days automatically routed to admin with "admin_pending" status
+  * Admin can approve/reject with comments and WhatsApp notifications sent to faculty
+  * Enhanced leave balance system with pending leaves tracking through entire workflow
+  * Complete application history preserved for all users regardless of status
+  * Smart leave routing: Students >5 days → HOD, Faculty >10 days → Admin
+  * WhatsApp notifications for all approval/rejection decisions with GVPCEW branding
+  * System now supports complete university-wide access with role-based dashboards
 - **Student Leave Routing Updated to HOD for >5 Days (Jul 3, 2025)**:
   * Modified leave application workflow: Student leaves >5 days now automatically route to HOD instead of faculty
   * Updated HOD name to "Dr PVSL Jagadamba" in demo data
