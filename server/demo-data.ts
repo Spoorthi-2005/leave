@@ -194,6 +194,21 @@ export async function initializeDemoData() {
       isActive: true
     });
 
+    // Create a demo faculty leave application exceeding 10 days for admin review
+    try {
+      const demoFacultyApp = await storage.createLeaveApplication({
+        userId: facultyCSE.id,
+        type: "vacation",
+        startDate: new Date("2025-07-20"),
+        endDate: new Date("2025-08-05"),
+        reason: "Summer vacation - family trip (16 days exceeding 10-day limit)",
+        status: "admin_pending" as any,
+      });
+      console.log(`📋 Created demo faculty leave application requiring admin approval (ID: ${demoFacultyApp.id})`);
+    } catch (error) {
+      console.log("Demo faculty application creation skipped");
+    }
+
     console.log("Demo data initialized successfully!");
     console.log("Test accounts created:");
     console.log("- Admin: admin/password");

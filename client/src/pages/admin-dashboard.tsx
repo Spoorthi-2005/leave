@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Users, CheckCircle, XCircle, User, Building2 } from "lucide-react";
+import { Calendar, Clock, Users, CheckCircle, XCircle, User, Building2, LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/simple-auth";
 
 interface LeaveApplication {
   id: number;
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
   const [selectedApplication, setSelectedApplication] = useState<LeaveApplication | null>(null);
   const [reviewComments, setReviewComments] = useState("");
   const { toast } = useToast();
+  const { user, logoutMutation } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch pending faculty applications
@@ -264,11 +266,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">
-          Review and manage faculty leave applications requiring admin approval
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+          <p className="text-gray-600">
+            Review and manage faculty leave applications requiring admin approval
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Welcome, {user?.fullName || 'Admin'}
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => logoutMutation.mutate()}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
 
       {/* Stats Cards */}
