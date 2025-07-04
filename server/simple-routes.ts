@@ -270,6 +270,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Application not found" });
       }
 
+      // Leave balance is now automatically handled in storage.updateLeaveApplication
+
       // Send WhatsApp notification if application is approved or rejected (not forwarded)
       if (finalStatus === "approved" || finalStatus === "rejected") {
         try {

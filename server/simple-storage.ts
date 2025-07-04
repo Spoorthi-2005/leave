@@ -41,6 +41,7 @@ export interface LeaveBalance {
   year: number;
   total: number;
   used: number;
+  pending: number;
   available: number;
   createdAt: Date;
   updatedAt: Date;
@@ -148,6 +149,25 @@ export class MemoryStorage implements IStorage {
       application.studentName = user.fullName;
     }
     
+    // Move leave days from available to pending when application is submitted
+    const days = Math.floor((application.endDate.getTime() - application.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const currentYear = new Date().getFullYear();
+    
+    // Get or create leave balance
+    let balance = await this.getUserLeaveBalance(application.userId, currentYear);
+    if (!balance) {
+      balance = await this.createLeaveBalance(application.userId, currentYear);
+    }
+    
+    // Check if user has enough available leaves
+    if (balance.available < days) {
+      throw new Error(`Insufficient leave balance. Available: ${balance.available}, Requested: ${days}`);
+    }
+    
+    // Move requested days to pending
+    await this.updatePendingLeaves(application.userId, currentYear, days);
+    console.log(`📝 Leave application submitted: ${days} days moved to pending for ${user?.fullName || 'user ' + application.userId}`);
+    
     this.leaveApplications.push(application);
     return application;
   }
@@ -183,12 +203,17 @@ export class MemoryStorage implements IStorage {
     return this.leaveApplications.find(app => app.id === id);
   }
 
-  async updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
+  async updateLeaveApplication(id: number, status: "approved" | "rejected" | "forwarded_to_admin" | "forwarded_to_hod", reviewedBy: number, comments: string): Promise<LeaveApplication | undefined> {
     const appIndex = this.leaveApplications.findIndex(app => app.id === id);
     if (appIndex === -1) return undefined;
 
+    const app = this.leaveApplications[appIndex];
+    const days = Math.floor((app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const currentYear = new Date().getFullYear();
+
+    // Update application status
     this.leaveApplications[appIndex] = {
-      ...this.leaveApplications[appIndex],
+      ...app,
       status,
       reviewedBy,
       reviewedAt: new Date(),
@@ -196,12 +221,18 @@ export class MemoryStorage implements IStorage {
       updatedAt: new Date(),
     };
 
-    // Update leave balance if approved
+    // Handle leave balance updates based on status change
     if (status === "approved") {
-      const app = this.leaveApplications[appIndex];
-      const days = Math.ceil((app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      await this.updateLeaveBalance(app.userId, new Date().getFullYear(), days);
+      // Move pending leaves to used leaves
+      await this.updatePendingLeaves(app.userId, currentYear, -days); // Remove from pending
+      await this.updateLeaveBalance(app.userId, currentYear, days);   // Add to used
+      console.log(`✅ Leave approved: ${days} days moved from pending to used for user ${app.userId}`);
+    } else if (status === "rejected") {
+      // Return pending leaves to available
+      await this.updatePendingLeaves(app.userId, currentYear, -days); // Remove from pending
+      console.log(`❌ Leave rejected: ${days} days returned to available for user ${app.userId}`);
     }
+    // Note: forwarded_to_admin and forwarded_to_hod don't change leave balance yet
 
     return this.leaveApplications[appIndex];
   }
@@ -217,6 +248,7 @@ export class MemoryStorage implements IStorage {
       year,
       total: 20,
       used: 0,
+      pending: 0,
       available: 20,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -229,7 +261,16 @@ export class MemoryStorage implements IStorage {
     const balanceIndex = this.leaveBalances.findIndex(b => b.userId === userId && b.year === year);
     if (balanceIndex !== -1) {
       this.leaveBalances[balanceIndex].used += additionalUsed;
-      this.leaveBalances[balanceIndex].available = this.leaveBalances[balanceIndex].total - this.leaveBalances[balanceIndex].used;
+      this.leaveBalances[balanceIndex].available = this.leaveBalances[balanceIndex].total - this.leaveBalances[balanceIndex].used - this.leaveBalances[balanceIndex].pending;
+      this.leaveBalances[balanceIndex].updatedAt = new Date();
+    }
+  }
+
+  async updatePendingLeaves(userId: number, year: number, pendingChange: number): Promise<void> {
+    const balanceIndex = this.leaveBalances.findIndex(b => b.userId === userId && b.year === year);
+    if (balanceIndex !== -1) {
+      this.leaveBalances[balanceIndex].pending += pendingChange;
+      this.leaveBalances[balanceIndex].available = this.leaveBalances[balanceIndex].total - this.leaveBalances[balanceIndex].used - this.leaveBalances[balanceIndex].pending;
       this.leaveBalances[balanceIndex].updatedAt = new Date();
     }
   }
